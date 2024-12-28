@@ -10,3 +10,16 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+# CMake 缓存文件
+cmake-build-debug/
+cmake-build-release/
+
+# 忽略 JetBrains CLion 配置
+.idea/
+*.iml
+
+# 临时文件
+*.log
+*.tmp
+
+.vscode
