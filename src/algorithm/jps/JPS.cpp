@@ -1,43 +1,48 @@
 #include "JPS.h"
 #include <algorithm>
 
-JPSPath jump_point_search(const Vertex& start, const Vertex& goal, const std::vector<std::vector<int>>& grid, JPSState& state) {
-    if (!is_walkable(grid, start.x, start.y) || !is_walkable(grid, goal.x, goal.y)) {
-        state.is_complete = true;
-        return JPSPath({}, {}, {});
-    }
-
+JPSPath jump_point_search(const Vertex& start, const Vertex& goal, 
+                         const std::vector<std::vector<int>>& grid, 
+                         JPSState& state) {
+    // 首次搜索时初始化起始节点
     if (state.open_list.empty()) {
         auto start_node = std::make_shared<AStarNode>(
             start, 0, heuristic(start, goal));
         state.open_list.push(start_node);
     }
 
+    // 继续搜索直到找到下一个可行路径或搜索完所有可能
     while (!state.open_list.empty()) {
         auto current = state.open_list.top();
         state.open_list.pop();
 
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
-            state.best_path = path.jump_points;
-            state.is_complete = true;
             return path;
         }
 
+        // 扩展当前节点
         for (const auto& dir : Action::DIRECTIONS_8) {
-            Vertex jump_point = jump(current->pos.x, current->pos.y, dir.x, dir.y, current, grid, goal);
+            Vertex jump_point = jump(current->pos.x, current->pos.y, 
+                                   dir.x, dir.y, current, grid, goal);
             if (jump_point.x == -1) continue;
 
-            int tentative_g = current->g + std::abs(current->pos.x - jump_point.x) + std::abs(current->pos.y - jump_point.y);
+            int tentative_g = current->g + std::abs(current->pos.x - jump_point.x) 
+                                       + std::abs(current->pos.y - jump_point.y);
 
-            auto neighbor_node = std::make_shared<AStarNode>(jump_point, tentative_g, heuristic(jump_point, goal), current);
+            auto neighbor_node = std::make_shared<AStarNode>(
+                jump_point, 
+                tentative_g, 
+                heuristic(jump_point, goal),
+                current
+            );
             state.open_list.push(neighbor_node);
         }
     }
 
     state.is_complete = true;
-    return JPSPath({}, {}, {});
-} 
+    return JPSPath({}, {}, {});  // 没有更多路径
+}
 
 inline bool is_walkable(const std::vector<std::vector<int>>& grid, int x, int y) {
     return x >= 0 && x < grid.size() && y >= 0 && y < grid[0].size() && grid[x][y] == 0;
@@ -103,21 +108,21 @@ bool check_straight_forced(const std::vector<std::vector<int>>& grid, int x, int
 
 JPSPath reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
     std::vector<Vertex> path;
-    std::vector<Vertex> jump_points;
+    std::vector<Vertex> all_jump_points;
     std::vector<Interval> possible_intervals;
     
-    // 构建跳点列表
+    // 首先收集所有跳点
     auto node = goal_node;
     while (node) {
-        jump_points.push_back(node->pos);
+        all_jump_points.push_back(node->pos);
         node = node->parent;
     }
-    std::reverse(jump_points.begin(), jump_points.end());
+    std::reverse(all_jump_points.begin(), all_jump_points.end());
     
     // 构建完整路径
-    for (size_t i = 0; i < jump_points.size() - 1; ++i) {
-        Vertex curr = jump_points[i];
-        Vertex next = jump_points[i + 1];
+    for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
+        Vertex curr = all_jump_points[i];
+        Vertex next = all_jump_points[i + 1];
         Vertex delta = calculate_direction(curr, next);
         
         while (curr != next) {
@@ -125,28 +130,31 @@ JPSPath reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
             curr = Vertex(curr.x + delta.x, curr.y + delta.y);
         }
     }
-    if (!jump_points.empty()) {
-        path.push_back(jump_points.back());
+    if (!all_jump_points.empty()) {
+        path.push_back(all_jump_points.back());
     }
     
     // 寻找可能的对称区间
-    for (size_t i = 0; i < jump_points.size() - 1; i++) {
-        Vertex v_i = jump_points[i];
-        Vertex v_next = jump_points[i + 1];
+    std::vector<Vertex> jump_points;  // 最终的跳点列表
+    for (size_t i = 0; i < all_jump_points.size() - 1; i++) {
+        Vertex v_i = all_jump_points[i];
+        Vertex v_next = all_jump_points[i + 1];
         Vertex action1 = calculate_direction(v_i, v_next);
         
-        // 如果第一个动作是直线移动，跳过
+        // 如果第一个动作是直线移动，添加当前跳点并继续
         if (action1.x == 0 || action1.y == 0) {
+            jump_points.push_back(v_i);
             continue;
         }
         
         // 检查是否有足够的点来形成区间
-        if (i + 2 < jump_points.size()) {
-            Vertex v_next2 = jump_points[i + 2];
+        if (i + 2 < all_jump_points.size()) {
+            Vertex v_next2 = all_jump_points[i + 2];
             Vertex action2 = calculate_direction(v_next, v_next2);
             
-            // 如果第二个动作是对角线移动，跳过
+            // 如果第二个动作是对角线移动，添加当前跳点并继续
             if (action2.x != 0 && action2.y != 0) {
+                jump_points.push_back(v_i);
                 continue;
             }
             
@@ -155,15 +163,17 @@ JPSPath reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
                 size_t j = i + 2;
                 Vertex prev_action = action2;
                 
-                while (j + 1 < jump_points.size()) {
-                    Vertex current_action = calculate_direction(jump_points[j], jump_points[j + 1]);
+                while (j + 1 < all_jump_points.size()) {
+                    Vertex current_action = calculate_direction(all_jump_points[j], all_jump_points[j + 1]);
                     
                     if (!(current_action == action1 || current_action == action2)) {
                         if (prev_action.x != 0 && prev_action.y != 0) {
-                            possible_intervals.emplace_back(v_i, jump_points[j - 1]);
+                            possible_intervals.emplace_back(v_i, all_jump_points[j - 1]);
+                            jump_points.push_back(v_i);  // 添加区间起点
                             i = j - 1;
                         } else {
-                            possible_intervals.emplace_back(v_i, jump_points[j]);
+                            possible_intervals.emplace_back(v_i, all_jump_points[j]);
+                            jump_points.push_back(v_i);  // 添加区间起点
                             i = j;
                         }
                         break;
@@ -172,7 +182,14 @@ JPSPath reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
                     j++;
                 }
             }
+        } else {
+            jump_points.push_back(v_i);
         }
+    }
+    
+    // 添加最后一个跳点
+    if (!all_jump_points.empty()) {
+        jump_points.push_back(all_jump_points.back());
     }
     
     return JPSPath(path, jump_points, possible_intervals);

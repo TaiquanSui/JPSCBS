@@ -5,10 +5,18 @@
 #include "../astar/AStar.h"
 #include "../Heuristic.h"
 #include "../action/Action.h"
-#include "JPSState.h"
 #include <vector>
 #include <memory>
 #include <queue>
+
+struct JPSState {
+    std::priority_queue<std::shared_ptr<AStarNode>, 
+                       std::vector<std::shared_ptr<AStarNode>>, 
+                       AStarNodeComparator> open_list;
+    bool is_complete = false;
+
+    JPSState() = default;
+};
 
 struct Interval {
     Vertex jump_point1;

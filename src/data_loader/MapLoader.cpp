@@ -25,28 +25,26 @@ std::vector<std::vector<int>> load_map(const std::string& filename) {
     return grid;
 }
 
-std::pair<std::vector<Vertex>, std::vector<Vertex>> load_scen(const std::string& filename) {
+std::vector<std::pair<Vertex, Vertex>> load_scen(const std::string& filename) {
     std::ifstream file(filename);
     std::string line;
-    std::getline(file, line);
-
-    std::vector<Vertex> starts, goals;
+    std::getline(file, line); // 跳过版本行
+    
+    std::vector<std::pair<Vertex, Vertex>> scenarios;
     while (std::getline(file, line)) {
         std::istringstream iss(line);
         std::string token;
         int x_start, y_start, x_goal, y_goal;
-
-        for (int i = 0; i < 8; ++i) {
+        
+        // 跳过前4个token
+        for (int i = 0; i < 4; ++i) {
             iss >> token;
-            if (i == 4) x_start = std::stoi(token);
-            if (i == 5) y_start = std::stoi(token);
-            if (i == 6) x_goal = std::stoi(token);
-            if (i == 7) y_goal = std::stoi(token);
         }
-
-        starts.emplace_back(x_start, y_start);
-        goals.emplace_back(x_goal, y_goal);
+        
+        // 读取坐标
+        iss >> x_start >> y_start >> x_goal >> y_goal;
+        scenarios.emplace_back(Vertex(x_start, y_start), Vertex(x_goal, y_goal));
     }
-
-    return {starts, goals};
+    
+    return scenarios;
 }
