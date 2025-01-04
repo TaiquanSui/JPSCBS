@@ -2,6 +2,9 @@
 #define ASTAR_H
 
 #include "../Vertex.h"
+#include "../action/Action.h"
+#include "../Heuristic.h"
+#include "../Utility.h"
 #include <vector>
 #include <queue>
 #include <unordered_map>
@@ -12,14 +15,15 @@
 
 struct AStarNode {
     Vertex pos;
-    int g, h;
-    int time;  // 添加时间维度
+    double g;
+    int h;
     std::shared_ptr<AStarNode> parent;
+    int time;
 
-    AStarNode(Vertex p, int g, int h, int t = 0, std::shared_ptr<AStarNode> parent = nullptr)
-        : pos(p), g(g), h(h), time(t), parent(std::move(parent)) {}
+    AStarNode(Vertex p, double g, int h, std::shared_ptr<AStarNode> parent = nullptr, int t = 0)
+        : pos(p), g(g), h(h), parent(std::move(parent)), time(t) {}
 
-    int f() const { return g + h; }
+    double f() const { return g + h; }
 };
 
 struct AStarNodeComparator {
@@ -35,6 +39,7 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
 // 带约束的A*搜索
 std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, 
                           const std::vector<std::vector<int>>& grid,
-                          const std::function<bool(const Vertex&, int)>& is_valid);
+                          const std::function<bool(const Vertex&, int)>& is_valid,
+                          int start_time = 0);
 
 #endif // ASTAR_H

@@ -85,6 +85,15 @@ void CBS::detect_conflicts(CBSNode& node) {
                 if (pos1 == pos2) {
                     node.conflicts.emplace_back(agent1, agent2, pos1, t);
                 }
+
+                if (t < max_length - 1) {
+                    Vertex next_pos1 = t + 1 < path1.size() ? path1[t + 1] : path1.back();
+                    Vertex next_pos2 = t + 1 < path2.size() ? path2[t + 1] : path2.back();
+                    
+                    if (pos1 == next_pos2 && pos2 == next_pos1) {
+                        node.conflicts.emplace_back(agent1, agent2, pos1, t);
+                    }
+                }
             }
         }
     }

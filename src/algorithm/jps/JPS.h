@@ -42,4 +42,5 @@ struct JPSPathComparator {
 
 JPSPath jump_point_search(const Vertex& start, const Vertex& goal, const std::vector<std::vector<int>>& grid, JPSState& state);
 
+
 #endif // JPS_H 

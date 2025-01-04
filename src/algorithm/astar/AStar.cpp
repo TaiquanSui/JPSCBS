@@ -1,14 +1,14 @@
 #include "AStar.h"
-#include "../action/Action.h"
 #include <memory>
 
+// 基本的A*寻路算法实现
 std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::vector<std::vector<int>>& grid) {
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 
-                       AStarNodeComparator> open_list;
+                       AStarNodeComparator> open_list;                  
     std::unordered_map<Vertex, int, VertexHash> closed_list;
 
-    auto start_node = std::make_shared<AStarNode>(start, 0, std::abs(start.x - goal.x) + std::abs(start.y - goal.y));
+    auto start_node = std::make_shared<AStarNode>(start, 0, heuristic(start, goal), nullptr, 0);
     open_list.push(start_node);
 
     while (!open_list.empty()) {
@@ -30,32 +30,35 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::v
         for (const auto& dir : Action::DIRECTIONS_8) {
             Vertex neighbor(current->pos.x + dir.x, current->pos.y + dir.y);
 
-            if (neighbor.x < 0 || neighbor.x >= grid.size() || neighbor.y < 0 || neighbor.y >= grid[0].size() || grid[neighbor.x][neighbor.y] == 1) {
+            if (!Utility::isWalkable(grid, neighbor)) {
                 continue;
             }
 
-            int tentative_g = current->g + 1;
+            // 计算从起点经过当前节点到邻居节点的代价
+            double tentative_g = current->g + Utility::getMoveCost(current->pos, neighbor);
 
+            // 如果邻居节点在closed_list中且新路径不更优,则跳过
             if (closed_list.count(neighbor) && closed_list[neighbor] <= tentative_g) {
                 continue;
             }
 
-            auto neighbor_node = std::make_shared<AStarNode>(neighbor, tentative_g, std::abs(neighbor.x - goal.x) + std::abs(neighbor.y - goal.y), current);
+            // 创建新的邻居节点并加入open_list
+            auto neighbor_node = std::make_shared<AStarNode>(neighbor, tentative_g, heuristic(neighbor, goal), current, 0);
             open_list.push(neighbor_node);
         }
     }
 
-    return {}; // No path found
+    return {}; // 没有找到路径
 }
 
-std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::vector<std::vector<int>>& grid, const std::function<bool(const Vertex&, int)>& is_valid) {
+std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::vector<std::vector<int>>& grid, const std::function<bool(const Vertex&, int)>& is_valid, int start_time = 0) {
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 
                        AStarNodeComparator> open_list;
     std::unordered_map<Vertex, std::unordered_map<int, int>, VertexHash> closed_list;
 
     auto start_node = std::make_shared<AStarNode>(
-        start, 0, std::abs(start.x - goal.x) + std::abs(start.y - goal.y), 0);
+        start, 0, heuristic(start, goal), nullptr, start_time);
     open_list.push(start_node);
 
     while (!open_list.empty()) {
@@ -102,12 +105,15 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::v
                 continue;
             }
 
+            int h_value = heuristic(neighbor, goal);
+            h_value = std::max(h_value, next_time);
+
             auto neighbor_node = std::make_shared<AStarNode>(
                 neighbor, 
                 tentative_g, 
-                std::abs(neighbor.x - goal.x) + std::abs(neighbor.y - goal.y),
-                next_time,
-                current
+                h_value,
+                current,
+                next_time
             );
             open_list.push(neighbor_node);
         }

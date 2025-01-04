@@ -1,8 +1,150 @@
+#include "../Utility.h"
 #include "JPS.h"
 #include <algorithm>
 
-JPSPath jump_point_search(const Vertex& start, const Vertex& goal, 
-                         const std::vector<std::vector<int>>& grid, 
+
+
+inline bool is_in_parent_chain(const std::shared_ptr<AStarNode>& current, const Vertex& point) {
+    auto temp = current;
+    while (temp) {
+        if (temp->pos == point) {
+            return true;
+        }
+        temp = temp->parent;
+    }
+    return false;
+}
+
+bool check_diagonal_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
+    return (!Utility::isWalkable(grid, Vertex(x - dx, y)) && Utility::isWalkable(grid, Vertex(x - dx, y + dy))) ||
+           (!Utility::isWalkable(grid, Vertex(x, y - dy)) && Utility::isWalkable(grid, Vertex(x + dx, y - dy)));
+}
+
+bool check_straight_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
+    if (dx != 0) {
+        return !Utility::isWalkable(grid, x, y + 1) || !Utility::isWalkable(grid, x, y - 1);
+    }
+    return !Utility::isWalkable(grid, x + 1, y) || !Utility::isWalkable(grid, x - 1, y);
+}
+
+Vertex jump(int x, int y, int dx, int dy, const std::shared_ptr<AStarNode>& current,
+            const std::vector<std::vector<int>>& grid, const Vertex& goal) {
+
+    int nx = x + dx;
+    int ny = y + dy;
+
+    if (!Utility::isWalkable(grid, nx, ny)) return Vertex(-1, -1);
+
+    Vertex next(nx, ny);
+    if (next == goal) return next;
+
+    if (is_in_parent_chain(current, next)) return Vertex(-1, -1);
+
+    if (dx != 0 && dy != 0) {
+        if (check_diagonal_forced(grid, nx, ny, dx, dy)) {
+            return next;
+        }
+    }
+    else if (check_straight_forced(grid, nx, ny, dx, dy)) {
+        return next;
+    }
+
+    return jump(nx, ny, dx, dy, current, grid, goal);
+}
+
+
+JPSPath reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
+    std::vector<Vertex> path;
+    std::vector<Vertex> all_jump_points;
+    std::vector<Interval> possible_intervals;
+
+    // 首先收集所有跳点
+    auto node = goal_node;
+    while (node) {
+        all_jump_points.push_back(node->pos);
+        node = node->parent;
+    }
+    std::reverse(all_jump_points.begin(), all_jump_points.end());
+
+    // 构建完整路径
+    for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
+        Vertex curr = all_jump_points[i];
+        Vertex next = all_jump_points[i + 1];
+        Vertex delta = Utility::calculateDirection(curr, next);
+
+        while (curr != next) {
+            path.push_back(curr);
+            curr = Vertex(curr.x + delta.x, curr.y + delta.y);
+        }
+    }
+    if (!all_jump_points.empty()) {
+        path.push_back(all_jump_points.back());
+    }
+
+    // 寻找可能的对称区间
+    std::vector<Vertex> jump_points;  // 最终的跳点列表
+    for (size_t i = 0; i < all_jump_points.size() - 1; i++) {
+        Vertex v_i = all_jump_points[i];
+        Vertex v_next = all_jump_points[i + 1];
+        Vertex action1 = Utility::calculateDirection(v_i, v_next);
+
+        // 如果第一个动作是直线移动，添加当前跳点并继续
+        if (action1.x == 0 || action1.y == 0) {
+            jump_points.push_back(v_i);
+            continue;
+        }
+
+        // 检查是否有足够的点来形成区间
+        if (i + 2 < all_jump_points.size()) {
+            Vertex v_next2 = all_jump_points[i + 2];
+            Vertex action2 = Utility::calculateDirection(v_next, v_next2);
+
+            // 如果第二个动作是对角线移动，添加当前跳点并继续
+            if (action2.x != 0 && action2.y != 0) {
+                jump_points.push_back(v_i);
+                continue;
+            }
+
+            // 如果第二个动作是直线移动
+            if (action2.x == 0 || action2.y == 0) {
+                size_t j = i + 2;
+                Vertex prev_action = action2;
+
+                while (j + 1 < all_jump_points.size()) {
+                    Vertex current_action = Utility::calculateDirection(all_jump_points[j], all_jump_points[j + 1]);
+
+                    if (!(current_action == action1 || current_action == action2)) {
+                        if (prev_action.x != 0 && prev_action.y != 0) {
+                            possible_intervals.emplace_back(v_i, all_jump_points[j - 1]);
+                            jump_points.push_back(v_i);  // 添加区间起点
+                            i = j - 1;
+                        } else {
+                            possible_intervals.emplace_back(v_i, all_jump_points[j]);
+                            jump_points.push_back(v_i);  // 添加区间起点
+                            i = j;
+                        }
+                        break;
+                    }
+                    prev_action = current_action;
+                    j++;
+                }
+            }
+        } else {
+            jump_points.push_back(v_i);
+        }
+    }
+
+    // 添加最后一个跳点
+    if (!all_jump_points.empty()) {
+        jump_points.push_back(all_jump_points.back());
+    }
+
+    return JPSPath(path, jump_points, possible_intervals);
+}
+
+
+JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
+                         const std::vector<std::vector<int>>& grid,
                          JPSState& state) {
     // 首次搜索时初始化起始节点
     if (state.open_list.empty()) {
@@ -44,156 +186,6 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
     return JPSPath({}, {}, {});  // 没有更多路径
 }
 
-inline bool is_walkable(const std::vector<std::vector<int>>& grid, int x, int y) {
-    return x >= 0 && x < grid.size() && y >= 0 && y < grid[0].size() && grid[x][y] == 0;
-}
-
-inline bool is_in_parent_chain(const std::shared_ptr<AStarNode>& current, const Vertex& point) {
-    auto temp = current;
-    while (temp) {
-        if (temp->pos == point) {
-            return true;
-        }
-        temp = temp->parent;
-    }
-    return false;
-}
-
-inline Vertex calculate_direction(const Vertex& from, const Vertex& to) {
-    return Vertex(
-        // x方向的单位向量：1（向右）, -1（向左）或 0（竖直）
-        (to.x - from.x) ? (to.x - from.x) / std::abs(to.x - from.x) : 0,
-        
-        // y方向的单位向量：1（向上）, -1（向下）或 0（水平）
-        (to.y - from.y) ? (to.y - from.y) / std::abs(to.y - from.y) : 0
-    );
-}
-
-Vertex jump(int x, int y, int dx, int dy, const std::shared_ptr<AStarNode>& current, 
-           const std::vector<std::vector<int>>& grid, const Vertex& goal) {
-
-    int nx = x + dx;
-    int ny = y + dy;
-
-    if (!is_walkable(grid, nx, ny)) return Vertex(-1, -1);
-    
-    Vertex next(nx, ny);
-    if (next == goal) return next;
-    
-    if (is_in_parent_chain(current, next)) return Vertex(-1, -1);
-    
-    if (dx != 0 && dy != 0) {
-        if (check_diagonal_forced(grid, nx, ny, dx, dy)) {
-            return next;
-        }
-    }
-    else if (check_straight_forced(grid, nx, ny, dx, dy)) {
-        return next;
-    }
-    
-    return jump(nx, ny, dx, dy, current, grid, goal);
-}
-
-bool check_diagonal_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
-    return (!is_walkable(grid, x - dx, y) && is_walkable(grid, x - dx, y + dy)) ||
-           (!is_walkable(grid, x, y - dy) && is_walkable(grid, x + dx, y - dy));
-}
-
-bool check_straight_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
-    if (dx != 0) {
-        return !is_walkable(grid, x, y + 1) || !is_walkable(grid, x, y - 1);
-    }
-    return !is_walkable(grid, x + 1, y) || !is_walkable(grid, x - 1, y);
-}
-
-JPSPath reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
-    std::vector<Vertex> path;
-    std::vector<Vertex> all_jump_points;
-    std::vector<Interval> possible_intervals;
-    
-    // 首先收集所有跳点
-    auto node = goal_node;
-    while (node) {
-        all_jump_points.push_back(node->pos);
-        node = node->parent;
-    }
-    std::reverse(all_jump_points.begin(), all_jump_points.end());
-    
-    // 构建完整路径
-    for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
-        Vertex curr = all_jump_points[i];
-        Vertex next = all_jump_points[i + 1];
-        Vertex delta = calculate_direction(curr, next);
-        
-        while (curr != next) {
-            path.push_back(curr);
-            curr = Vertex(curr.x + delta.x, curr.y + delta.y);
-        }
-    }
-    if (!all_jump_points.empty()) {
-        path.push_back(all_jump_points.back());
-    }
-    
-    // 寻找可能的对称区间
-    std::vector<Vertex> jump_points;  // 最终的跳点列表
-    for (size_t i = 0; i < all_jump_points.size() - 1; i++) {
-        Vertex v_i = all_jump_points[i];
-        Vertex v_next = all_jump_points[i + 1];
-        Vertex action1 = calculate_direction(v_i, v_next);
-        
-        // 如果第一个动作是直线移动，添加当前跳点并继续
-        if (action1.x == 0 || action1.y == 0) {
-            jump_points.push_back(v_i);
-            continue;
-        }
-        
-        // 检查是否有足够的点来形成区间
-        if (i + 2 < all_jump_points.size()) {
-            Vertex v_next2 = all_jump_points[i + 2];
-            Vertex action2 = calculate_direction(v_next, v_next2);
-            
-            // 如果第二个动作是对角线移动，添加当前跳点并继续
-            if (action2.x != 0 && action2.y != 0) {
-                jump_points.push_back(v_i);
-                continue;
-            }
-            
-            // 如果第二个动作是直线移动
-            if (action2.x == 0 || action2.y == 0) {
-                size_t j = i + 2;
-                Vertex prev_action = action2;
-                
-                while (j + 1 < all_jump_points.size()) {
-                    Vertex current_action = calculate_direction(all_jump_points[j], all_jump_points[j + 1]);
-                    
-                    if (!(current_action == action1 || current_action == action2)) {
-                        if (prev_action.x != 0 && prev_action.y != 0) {
-                            possible_intervals.emplace_back(v_i, all_jump_points[j - 1]);
-                            jump_points.push_back(v_i);  // 添加区间起点
-                            i = j - 1;
-                        } else {
-                            possible_intervals.emplace_back(v_i, all_jump_points[j]);
-                            jump_points.push_back(v_i);  // 添加区间起点
-                            i = j;
-                        }
-                        break;
-                    }
-                    prev_action = current_action;
-                    j++;
-                }
-            }
-        } else {
-            jump_points.push_back(v_i);
-        }
-    }
-    
-    // 添加最后一个跳点
-    if (!all_jump_points.empty()) {
-        jump_points.push_back(all_jump_points.back());
-    }
-    
-    return JPSPath(path, jump_points, possible_intervals);
-}
 
 
 

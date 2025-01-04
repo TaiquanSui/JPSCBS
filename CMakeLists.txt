@@ -5,10 +5,13 @@ set(CMAKE_CXX_STANDARD 20)
 
 # 创建库
 add_library(project_lib
-        src/algorithm/Vertex.cpp
+        src/algorithm/action/Action.h
+        src/algorithm/action/Action.cpp
         src/algorithm/Vertex.h
         src/algorithm/astar/AStar.cpp
         src/algorithm/astar/AStar.h
+        src/algorithm/jps/JPS.cpp
+        src/algorithm/jps/JPS.h
         src/algorithm/cbs/CBS.cpp
         src/algorithm/cbs/CBS.h
         src/data_loader/MapLoader.cpp
@@ -20,9 +23,6 @@ add_library(project_lib
         src/algorithm/jpscbs/JPSCBS.cpp
         src/algorithm/jpscbs/JPSCBS.h)
 
-# 主程序
-add_executable(CBS_Localized_Conflict_Resolution src/main.cpp)
-target_link_libraries(CBS_Localized_Conflict_Resolution PRIVATE project_lib)
 
 # 基准测试程序
 add_executable(cbs_benchmark src/benchmark/CBSBenchmark.cpp)
