@@ -19,10 +19,11 @@ namespace Action {
         WAIT       // Wait
     };
 
-    extern const std::vector<Vertex> DIRECTIONS_8;  // 8方向移动
-    extern const std::vector<Vertex> DIRECTIONS_4;  // 4方向移动
-    extern const Vertex WAIT_MOVE;                  // 等待动作
-    extern const std::unordered_map<Move, Vertex> DIRECTION_MAP;  // 方向映射
+    extern const std::vector<Vertex> DIRECTIONS_8;
+    extern const std::vector<Vertex> DIRECTIONS_4;
+    extern const std::vector<Vertex> MOVEMENTS_9;
+    extern const std::vector<Vertex> MOVEMENTS_5;
+    extern const std::unordered_map<Move, Vertex> MOVEMENT_MAP;  // 方向映射
 }
 
 #endif // ACTION_H

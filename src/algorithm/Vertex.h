@@ -15,6 +15,10 @@ struct Vertex {
     Vertex operator-(const Vertex& other) const {
         return Vertex(x - other.x, y - other.y);
     }
+
+    bool operator!=(const Vertex& other) const {
+        return !(*this == other);
+    }
 };
 
 struct VertexHash {

@@ -27,15 +27,15 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::v
 
         closed_list[current->pos] = current->g;
 
-        for (const auto& dir : Action::DIRECTIONS_8) {
-            Vertex neighbor(current->pos.x + dir.x, current->pos.y + dir.y);
+        for (const auto& move : Action::MOVEMENTS_9) {
+            Vertex neighbor(current->pos.x + move.x, current->pos.y + move.y);
 
-            if (!Utility::isWalkable(grid, neighbor)) {
+            if (!utils::isWalkable(grid, neighbor)) {
                 continue;
             }
 
             // 计算从起点经过当前节点到邻居节点的代价
-            double tentative_g = current->g + Utility::getMoveCost(current->pos, neighbor);
+            double tentative_g = current->g + utils::getMoveCost(current->pos, neighbor);
 
             // 如果邻居节点在closed_list中且新路径不更优,则跳过
             if (closed_list.count(neighbor) && closed_list[neighbor] <= tentative_g) {
@@ -81,16 +81,13 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::v
         }
         closed_list[current->pos][current->time] = current->g;
 
-        std::vector<Vertex> directions = Action::DIRECTIONS_8;
-        directions.push_back(Action::WAIT_MOVE);
+        std::vector<Vertex> movements = Action::MOVEMENTS_9;
 
-        for (const auto& dir : directions) {
-            Vertex neighbor(current->pos.x + dir.x, current->pos.y + dir.y);
+        for (const auto& move : movements) {
+            Vertex neighbor(current->pos.x + move.x, current->pos.y + move.y);
             int next_time = current->time + 1;
 
-            if (neighbor.x < 0 || neighbor.x >= grid.size() || 
-                neighbor.y < 0 || neighbor.y >= grid[0].size() || 
-                grid[neighbor.x][neighbor.y] == 1) {
+            if (!utils::isWalkable(grid, neighbor)) {
                 continue;
             }
 
@@ -98,7 +95,7 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::v
                 continue;
             }
 
-            int tentative_g = current->g + 1;
+            double tentative_g = current->g + utils::getMoveCost(current->pos, neighbor);
 
             if (closed_list[neighbor].count(next_time) && 
                 closed_list[neighbor][next_time] <= tentative_g) {
@@ -106,7 +103,6 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, const std::v
             }
 
             int h_value = heuristic(neighbor, goal);
-            h_value = std::max(h_value, next_time);
 
             auto neighbor_node = std::make_shared<AStarNode>(
                 neighbor, 
