@@ -2,8 +2,19 @@
 #define CBS_H
 
 #include "../Vertex.h"
+#include "../Agent.h"
 #include <vector>
 #include <unordered_map>
+
+struct Conflict {
+    int agent1;
+    int agent2;
+    Vertex vertex;
+    int time;
+    
+    Conflict(int a1, int a2, const Vertex& v, int t) 
+        : agent1(a1), agent2(a2), vertex(v), time(t) {}
+};
 
 struct Constraint {
     int agent;
@@ -17,7 +28,6 @@ struct CBSNode {
     std::unordered_map<int, std::vector<Vertex>> solution;
     std::vector<Constraint> constraints;
     int cost;
-    std::vector<std::tuple<int, int, Vertex, int>> conflicts; // (agent1, agent2, vertex, time)
 
     CBSNode() : cost(0) {}
 };
@@ -25,27 +35,18 @@ struct CBSNode {
 class CBS {
 public:
     explicit CBS(bool use_bypass = true) : use_bypass(use_bypass) {}
-    std::vector<std::vector<Vertex>> solve(const std::vector<std::pair<Vertex, Vertex>>& agents, 
+    std::vector<std::vector<Vertex>> solve(const std::vector<Agent>& agents, 
                                          const std::vector<std::vector<int>>& grid);
 
 private:
     bool use_bypass;
     
-    // 核心函数
-    void detect_conflicts(CBSNode& node);
-    std::vector<Vertex> find_path(const Vertex& start, const Vertex& goal,
+    std::vector<Conflict> detect_conflicts(const CBSNode& node);
+    std::vector<Vertex> find_path(const Agent& agent,
                                 const std::vector<std::vector<int>>& grid,
-                                const std::vector<Constraint>& constraints,
-                                int agent_id);
-    bool validate_path(const std::vector<Vertex>& path, 
-                      const std::vector<Constraint>& constraints,
-                      int agent_id);
-    
-    // 辅助函数
-    bool find_bypass(CBSNode& node, int agent, const Vertex& conflict_vertex, 
+                                const std::vector<Constraint>& constraints);
+    bool find_bypass(CBSNode& node, const Agent& agent, const Vertex& conflict_vertex, 
                     int conflict_time, const std::vector<std::vector<int>>& grid);
-    void resolve_conflict(CBSNode& node, const std::tuple<int, int, Vertex, int>& conflict,
-                         std::vector<CBSNode>& children, const std::vector<std::vector<int>>& grid);
 };
 
 #endif // CBS_H

@@ -3,15 +3,15 @@
 #include <queue>
 #include <algorithm>
 
-std::vector<std::vector<Vertex>> CBS::solve(const std::vector<std::pair<Vertex, Vertex>>& agents,
+std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
                                           const std::vector<std::vector<int>>& grid) {
     CBSNode root;
     
     // 为每个智能体找到初始路径
-    for (size_t i = 0; i < agents.size(); ++i) {
-        auto path = find_path(agents[i].first, agents[i].second, grid, {}, i);
+    for (const auto& agent : agents) {
+        auto path = find_path(agent, grid, {});
         if (path.empty()) return {}; // 无解
-        root.solution[i] = path;
+        root.solution[agent.id] = path;
         root.cost += path.size();
     }
 
@@ -23,42 +23,44 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<std::pair<Vertex, 
         CBSNode current = open_list.top();
         open_list.pop();
 
-        // 检测冲突
-        detect_conflicts(current);
+        auto conflicts = detect_conflicts(current);
 
-        if (current.conflicts.empty()) {
+        if (conflicts.empty()) {
             std::vector<std::vector<Vertex>> result;
             result.reserve(agents.size());
-            for (size_t i = 0; i < agents.size(); ++i) {
-                result.push_back(current.solution[i]);
+            for (const auto& agent : agents) {
+                result.push_back(current.solution[agent.id]);
             }
             return result;
         }
 
-        // 处理第一个冲突
-        const auto& conflict = current.conflicts.front();
-        int agent1 = std::get<0>(conflict);
-        int agent2 = std::get<1>(conflict);
-        Vertex conflict_vertex = std::get<2>(conflict);
-        int conflict_time = std::get<3>(conflict);
+        const Conflict& conflict = conflicts.front();
+        
+        // 找到冲突涉及的智能体
+        const Agent& agent1 = *std::find_if(agents.begin(), agents.end(),
+            [&](const Agent& a) { return a.id == conflict.agent1; });
+        const Agent& agent2 = *std::find_if(agents.begin(), agents.end(),
+            [&](const Agent& a) { return a.id == conflict.agent2; });
 
-        // 尝试绕路
-        if (use_bypass && find_bypass(current, agent1, conflict_vertex, conflict_time, grid)) {
-            open_list.push(current);
-            continue;
+        // 尝试为两个智能体寻找绕路方案
+        if (use_bypass) {
+            for (const Agent& agent : {agent1, agent2}){
+                if (find_bypass(current, agent, conflict.vertex, conflict.time, grid)) {
+                    open_list.push(current);
+                    continue;
+                }
+            }
         }
 
         // 创建子节点并添加约束
-        for (int agent : {agent1, agent2}) {
+        for (const Agent& agent : {agent1, agent2}) {
             CBSNode child = current;
-            child.constraints.emplace_back(agent, conflict_vertex, conflict_time);
+            child.constraints.emplace_back(agent.id, conflict.vertex, conflict.time);
             
-            // 重新规划受影响智能体的路径
-            auto new_path = find_path(agents[agent].first, agents[agent].second, 
-                                    grid, child.constraints, agent);
+            auto new_path = find_path(agent, grid, child.constraints);
             
             if (!new_path.empty()) {
-                child.solution[agent] = new_path;
+                child.solution[agent.id] = new_path;
                 child.cost = 0;
                 for (const auto& [_, path] : child.solution) {
                     child.cost += path.size();
@@ -71,92 +73,80 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<std::pair<Vertex, 
     return {}; // 无解
 }
 
-void CBS::detect_conflicts(CBSNode& node) {
-    node.conflicts.clear();
+std::vector<Conflict> CBS::detect_conflicts(const CBSNode& node) {
+    std::vector<Conflict> conflicts;
+    
+    // 检查所有智能体对之间的冲突
     for (const auto& [agent1, path1] : node.solution) {
         for (const auto& [agent2, path2] : node.solution) {
             if (agent1 >= agent2) continue;
             
             size_t max_length = std::max(path1.size(), path2.size());
+            
+            // 检查每个时间步
             for (size_t t = 0; t < max_length; ++t) {
+                // 获取当前位置（如果路径结束则使用终点）
                 Vertex pos1 = t < path1.size() ? path1[t] : path1.back();
                 Vertex pos2 = t < path2.size() ? path2[t] : path2.back();
 
+                // 检查顶点冲突 (Vertex conflict)
                 if (pos1 == pos2) {
-                    node.conflicts.emplace_back(agent1, agent2, pos1, t);
+                    conflicts.emplace_back(agent1, agent2, pos1, t);
+                    continue;
                 }
 
+                // 检查跟随冲突和交换冲突
                 if (t < max_length - 1) {
-                    Vertex next_pos1 = t + 1 < path1.size() ? path1[t + 1] : path1.back();
-                    Vertex next_pos2 = t + 1 < path2.size() ? path2[t + 1] : path2.back();
+                    Vertex next_pos1 = (t + 1) < path1.size() ? path1[t + 1] : path1.back();
+                    Vertex next_pos2 = (t + 1) < path2.size() ? path2[t + 1] : path2.back();
                     
-                    if (pos1 == next_pos2 && pos2 == next_pos1) {
-                        node.conflicts.emplace_back(agent1, agent2, pos1, t);
+                    // 检查交换冲突 (Swapping conflict) 或 跟随冲突 (Following conflict)
+                    if (pos1 == next_pos2 && pos2 == next_pos1) { // 交换冲突
+                        // 对于交换冲突，可以选择任一交换位置作为冲突位置
+                        conflicts.emplace_back(agent1, agent2, pos1, t);
+                        conflicts.emplace_back(agent1, agent2, pos2, t);
+                        continue;
+                    }
+                    if (next_pos1 == pos2) { // agent1 跟随 agent2
+                        conflicts.emplace_back(agent1, agent2, pos2, t);
+                        continue;
+                    }
+                    if (next_pos2 == pos1) { // agent2 跟随 agent1
+                        conflicts.emplace_back(agent1, agent2, pos1, t);
+                        continue;
                     }
                 }
             }
         }
     }
+    
+    return conflicts;
 }
 
-std::vector<Vertex> CBS::find_path(const Vertex& start, const Vertex& goal,
+std::vector<Vertex> CBS::find_path(const Agent& agent,
                                  const std::vector<std::vector<int>>& grid,
-                                 const std::vector<Constraint>& constraints,
-                                 int agent_id) {
-    auto is_valid = [&](const Vertex& pos, int time) {
-        for (const auto& constraint : constraints) {
-            if (constraint.agent == agent_id && 
-                constraint.vertex == pos && 
-                constraint.time == time) {
-                return false;
-            }
-        }
-        return true;
-    };
-
-    return a_star(start, goal, grid, is_valid);
+                                 const std::vector<Constraint>& constraints) {
+    return a_star(agent, grid, constraints);
 }
 
-bool CBS::validate_path(const std::vector<Vertex>& path,
-                      const std::vector<Constraint>& constraints,
-                      int agent_id) {
-    for (size_t t = 0; t < path.size(); ++t) {
-        for (const auto& constraint : constraints) {
-            if (constraint.agent == agent_id &&
-                constraint.vertex == path[t] &&
-                constraint.time == t) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
+            
+bool CBS::find_bypass(CBSNode& node, const Agent& agent, const Vertex& conflict_vertex, 
+                     int conflict_time, const std::vector<std::vector<int>>& grid) {
+    auto original_path = node.solution[agent.id];
+    
+    // 创建临时约束集
+    std::vector<Constraint> temp_constraints = node.constraints;
+    // 添加冲突位置的约束
+    temp_constraints.emplace_back(agent.id, conflict_vertex, conflict_time);
+    
+    // 使用临时约束集进行搜索
+    auto path = a_star(agent, grid, temp_constraints);
 
-bool CBS::find_bypass(CBSNode& node, int agent, const Vertex& conflict_vertex, int conflict_time, const std::vector<std::vector<int>>& grid) {
-    auto original_path = node.solution[agent];
-    auto path = a_star(original_path[0], original_path.back(), grid);
-
+    // 如果找到相同长度的路径，则更新解决方案（但不更新约束）
     if (!path.empty() && path.size() == original_path.size()) {
-        node.solution[agent] = path;
+        node.solution[agent.id] = path;
         return true;
     }
 
     return false;
-}
-
-void CBS::resolve_conflict(CBSNode& node, const std::tuple<int, int, Vertex, int>& conflict, std::vector<CBSNode>& children, const std::vector<std::vector<int>>& grid) {
-    int agent1 = std::get<0>(conflict);
-    int agent2 = std::get<1>(conflict);
-    Vertex conflict_vertex = std::get<2>(conflict);
-    int conflict_time = std::get<3>(conflict);
-
-    for (int agent : {agent1, agent2}) {
-        CBSNode child = node;
-        auto& path = child.solution[agent];
-        if (conflict_time < path.size()) {
-            path[conflict_time] = conflict_vertex;
-        }
-        child.cost += 1;
-        children.push_back(child);
-    }
 }
