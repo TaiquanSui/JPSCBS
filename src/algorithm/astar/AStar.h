@@ -44,11 +44,5 @@ std::vector<Vertex> a_star(const Agent& agent,
                           const std::vector<Constraint>& constraints,
                           int start_time = 0);
 
-// 私有辅助函数
-namespace {
-    std::vector<Vertex> reconstruct_path(const std::shared_ptr<AStarNode>& goal_node);
-    bool check_constraints(const std::vector<Constraint>& constraints, 
-                         int agent_id, const Vertex& pos, int time);
-}
 
 #endif // ASTAR_H

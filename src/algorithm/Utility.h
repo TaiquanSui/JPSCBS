@@ -35,7 +35,7 @@ namespace utils {
     inline double getMoveCost(const Vertex& from, const Vertex& to) {
         int dx = std::abs(to.x - from.x);
         int dy = std::abs(to.y - from.y);
-        return (dx && dy && dx == dy) ? dx*std::sqrt(2.0) : dx;  // 对角线移动代价为√2，直线移动代价为1
+        return (dx && dy && dx == dy) ? dx * std::sqrt(2.0) : dx;  // 对角线移动代价为√2，直线移动代价为1
     }
 
     inline bool isDiagonal(const Vertex& from, const Vertex& to) {

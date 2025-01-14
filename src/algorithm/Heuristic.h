@@ -6,7 +6,7 @@
 #include <cmath>
 
 inline int heuristic(const Vertex& a, const Vertex& b) {
-    return Utility::manhattanDistance(a, b);
+    return utils::manhattanDistance(a, b);
 }
 
 #endif // HEURISTIC_H
