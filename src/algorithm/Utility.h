@@ -2,6 +2,7 @@
 #define UTILITY_H
 
 #include "Vertex.h"
+#include "cbs/CBS.h"
 #include <vector>
 #include <cmath>
 #include <chrono>
@@ -37,7 +38,7 @@ namespace utils {
     inline double getMoveCost(const Vertex& from, const Vertex& to) {
         int dx = std::abs(to.x - from.x);
         int dy = std::abs(to.y - from.y);
-        return (dx && dy && dx == dy) ? dx * std::sqrt(2.0) : dx;  // 对角线移动代价为√2，直线移动代价为1
+        return (dx && dy && dx == dy) ? dx * std::sqrt(2.0) : dx;  // Diagonal move cost is sqrt(2), straight move cost is 1
     }
 
     inline bool isDiagonal(const Vertex& from, const Vertex& to) {
@@ -64,22 +65,22 @@ namespace utils {
                            const std::vector<std::vector<int>>& grid) {
         if (path.empty()) return false;
         
-        // 检查起点和终点
+        // Check start and goal
         if (path.front() != start || path.back() != goal) {
             return false;
         }
         
-        // 检查路径连续性
+        // Check path continuity
         for (size_t i = 0; i < path.size() - 1; ++i) {
             const auto& current = path[i];
             const auto& next = path[i + 1];
             
-            // 检查相邻点是否合法移动
+            // Check if adjacent points are valid moves
             if (abs(current.x - next.x) > 1 || abs(current.y - next.y) > 1) {
                 return false;
             }
             
-            // 检查是否穿墙
+            // Check if crossing walls
             if (!isWalkable(grid, next.x, next.y)) {
                 return false;
             }
@@ -108,14 +109,14 @@ namespace utils {
         return duration.count() / 1000.0;
     }
 
-    // 日志级别枚举
+    // Log level enum
     enum class LogLevel {
         INFO,
         WARNING,
         ERROR
     };
 
-    // 日志记录函数
+    // Log function
     inline void log(LogLevel level, const std::string& message) {
         switch (level) {
             case LogLevel::INFO:
@@ -130,7 +131,7 @@ namespace utils {
         }
     }
 
-    // 便捷的日志记录函数
+    // Convenient log function
     inline void log_info(const std::string& message) {
         log(LogLevel::INFO, message);
     }

@@ -3,7 +3,7 @@
 
 int main() {
     try {
-        CBS cbs(true);  // 启用优化
+        CBS cbs(true);  // Enable optimization
         benchmark::run_all_scenarios(
             [&cbs](const std::vector<Agent>& agents, const std::vector<std::vector<int>>& grid) {
                 return cbs.solve(agents, grid);

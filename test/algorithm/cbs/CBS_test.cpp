@@ -3,7 +3,7 @@
 
 class CBSTest : public ::testing::Test {
 protected:
-    CBS solver{true};  // 启用优化
+    CBS solver{true};  // Enable optimization
     std::vector<std::vector<int>> grid;
     
     void SetUp() override {
@@ -46,8 +46,8 @@ TEST_F(CBSTest, ConflictResolution) {
     auto paths = solver.solve(agents, grid);
     ASSERT_FALSE(paths.empty());
     
-    // 验证路径长度合理
+    // Verify reasonable path lengths
     for (const auto& path : paths) {
-        ASSERT_LE(path.size(), 5);  // 最长路径不应超过5步
+        ASSERT_LE(path.size(), 5);  // Maximum path length should not exceed 5 steps
     }
 } 

@@ -15,7 +15,7 @@ namespace {
     }
 
     bool check_diagonal_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
-        // 检查两个可能的强制邻居
+        // Check two possible forced neighbors
         bool forced1 = !utils::isWalkable(grid, x - dx, y) && 
                        utils::isWalkable(grid, x - dx, y + dy);
         bool forced2 = !utils::isWalkable(grid, x, y - dy) && 
@@ -24,10 +24,10 @@ namespace {
     }
 
     bool check_straight_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
-        if (dx != 0) { // 水平移动
+        if (dx != 0) { // Horizontal move
             return utils::isWalkable(grid, x, y + 1) || 
                    utils::isWalkable(grid, x, y - 1);
-        } else { // 垂直移动
+        } else { // Vertical move
             return utils::isWalkable(grid, x + 1, y) || 
                    utils::isWalkable(grid, x - 1, y);
         }
@@ -51,7 +51,7 @@ namespace {
     
         // 6: if ∃ n′ ∈ neighbours(n) s.t. n′ is forced then
         // 7: return n
-        if (dx != 0 && dy != 0) {  // 对角线移动
+        if (dx != 0 && dy != 0) {  // Diagonal move
             if(check_diagonal_forced(grid, next.x, next.y, dx, dy) && !is_in_parent_chain(current, next))
                 return next;
             // 8: if d~ is diagonal then
@@ -75,7 +75,7 @@ namespace {
     
     
     JPSPath reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
-        // 1. 收集跳点并构建基本路径
+        // 1. Collect jump points and build basic path
         std::vector<Vertex> all_jump_points;
         std::vector<Vertex> path;
         {
@@ -87,24 +87,24 @@ namespace {
             std::reverse(all_jump_points.begin(), all_jump_points.end());
         }
     
-        // 2. 构建完整路径（在跳点之间插入中间点）
+        // 2. Build full path (insert intermediate points between jump points)
         if (!all_jump_points.empty()) {
             for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
                 const Vertex& curr_point = all_jump_points[i];
                 const Vertex& next_point = all_jump_points[i + 1];
                 Vertex delta = utils::calculateDirection(curr_point, next_point);
     
-                // 添加当前点到下一个跳点之间的所有点
+                // Add all points between current jump point and next jump point
                 Vertex curr = curr_point;
                 while (curr != next_point) {
                     path.push_back(curr);
                     curr = Vertex(curr.x + delta.x, curr.y + delta.y);
                 }
             }
-            path.push_back(all_jump_points.back());  // 添加终点
+            path.push_back(all_jump_points.back());  // Add goal
         }
     
-        // 3. 识别对称区间和关键跳点
+        // 3. Identify symmetric intervals and key jump points
         std::vector<Vertex> jump_points;
         std::vector<Interval> possible_intervals;
         
@@ -113,46 +113,46 @@ namespace {
             const auto& next = all_jump_points[i + 1];
             const auto& next2 = all_jump_points[i + 2];
     
-            // 获取关键动作方向
+            // Get key action direction
             Vertex dir1 = utils::calculateDirection(current, next);
             Vertex dir2 = utils::calculateDirection(next, next2);
     
-            // 如果不是对角线-直线模式，直接添加当前跳点
+            // If not diagonal-straight pattern, add current jump point directly
             if (utils::isStraight(dir1) || utils::isDiagonal(dir2)) {
                 jump_points.push_back(current);
                 continue;
             }
     
-            // 寻找对称区间
+            // Find symmetric interval
             for (size_t j = i + 2; j + 1 < all_jump_points.size(); ++j) {
                 const auto& curr_point = all_jump_points[j];
                 const auto& next_point = all_jump_points[j + 1];
                 Vertex curr_dir = utils::calculateDirection(curr_point, next_point);
     
-                // 检查是否到达区间终点
+                // Check if reached interval end
                 if (curr_dir != dir1 && curr_dir != dir2) {
-                    // 确定区间终点位置
+                    // Determine interval end position
                     bool is_diagonal_end = utils::isDiagonal(all_jump_points[j-1], curr_point);
                     const auto& interval_end = is_diagonal_end ? all_jump_points[j - 1] : curr_point;
                     
-                    // 收集区间内的所有跳点
+                    // Collect all jump points in interval
                     std::vector<Vertex> interval_points;
                     for (size_t k = i; k <= (is_diagonal_end ? j - 1 : j); ++k) {
                         interval_points.push_back(all_jump_points[k]);
                     }
                     
-                    // 记录区间和更新索引
+                    // Record interval and update index
                     possible_intervals.emplace_back(interval_points);
                     i = j - (is_diagonal_end ? 1 : 0);
                     break;
                 }
             }
     
-            // 无论是否找到区间，都添加当前跳点
+            // Add current jump point regardless of whether an interval is found
             jump_points.push_back(current);
         }
     
-        // 添加最后两个跳点
+        // Add last two jump points
         if (all_jump_points.size() >= 2) {
             jump_points.push_back(all_jump_points[all_jump_points.size() - 2]);
         }
@@ -163,13 +163,13 @@ namespace {
         return JPSPath(path, jump_points, possible_intervals);
     }
     
-    // 获取需要探索的方向
+    // Get directions to explore
     std::vector<Vertex> get_pruned_neighbors(const std::shared_ptr<AStarNode>& current,
                              const std::vector<std::vector<int>>& grid) {
         std::vector<Vertex> neighbors;
         const Vertex& pos = current->pos;
         
-        // 如果是起始节点，探索所有8个方向
+        // If starting node, explore all 8 directions
         if (!current->parent) {
             for (const auto& move : Action::DIRECTIONS_8) {
                 if (utils::isWalkable(grid, pos.x + move.x, pos.y + move.y)) {
@@ -179,19 +179,19 @@ namespace {
             return neighbors;
         }
     
-        // 计算来向方向
+        // Calculate incoming direction
         Vertex dir = utils::calculateDirection(current->parent->pos, current->pos);
         
-        if (utils::isDiagonal(dir)) {  // 对角线移动
+        if (utils::isDiagonal(dir)) {  // Diagonal move
             // Natural neighbours for diagonal moves:
-            // 1. 当前对角线方向
-            // 2. 水平和垂直分量
+            // 1. Current diagonal direction
+            // 2. Horizontal and vertical components
             if (utils::isWalkable(grid, pos.x + dir.x, pos.y + dir.y)) {
                 neighbors.push_back(dir);
             }
-            // 水平和垂直分量只有在对应方向可行走时才添加
+            // Horizontal and vertical components are only added if they are walkable
             // Forced neighbours
-            // 当一个非自然邻居的路径长度通过current比不通过current更短时
+            // When the path length through a non-natural neighbor is shorter than through current
             if (utils::isWalkable(grid, pos.x + dir.x, pos.y)) {
                 neighbors.push_back(Vertex(dir.x, 0));
                 if (!utils::isWalkable(grid, pos.x, pos.y - dir.y) && 
@@ -207,10 +207,10 @@ namespace {
                 }
             }
             
-        } else {  // 直线移动
+        } else {  // Straight move
             // Natural neighbours for straight moves:
-            // 只有当前方向
-            if (dir.x != 0) {  // 水平移动
+            // Only current direction
+            if (dir.x != 0) {  // Horizontal move
                 if (utils::isWalkable(grid, pos.x + dir.x, pos.y)) {
                     neighbors.push_back(dir);
                 }
@@ -224,7 +224,7 @@ namespace {
                     utils::isWalkable(grid, pos.x + dir.x, pos.y - 1)) {
                     neighbors.push_back(Vertex(dir.x, -1));
                 }
-            } else {  // 垂直移动
+            } else {  // vertical move
                 if (utils::isWalkable(grid, pos.x, pos.y + dir.y)) {
                     neighbors.push_back(dir);
                 }
@@ -249,7 +249,7 @@ namespace {
 JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                          const std::vector<std::vector<int>>& grid,
                          JPSState& state) {
-    // 首次搜索时初始化起始节点
+    // Initialize starting node on first search
     if (state.open_list.empty()) {
         auto start_node = std::make_shared<AStarNode>(
             start, 0, heuristic(start, goal));
@@ -264,10 +264,10 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
             return reconstruct_path(current);
         }
 
-        // 获取修剪后的邻居方向
+        // Get pruned neighbor directions
         std::vector<Vertex> pruned_dirs = get_pruned_neighbors(current, grid);
         
-        // 扩展当前节点
+        // Expand current node
         for (const auto& dir : pruned_dirs) {
             Vertex jump_point = jump(current->pos.x, current->pos.y, 
                                    dir.x, dir.y, current, grid, goal);

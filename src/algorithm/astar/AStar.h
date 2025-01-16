@@ -33,11 +33,11 @@ struct AStarNodeComparator {
     }
 };
 
-// 基本的A*搜索
+// Basic A* search
 std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, 
                           const std::vector<std::vector<int>>& grid);
 
-// 带约束的A*搜索
+// A* search with constraints
 std::vector<Vertex> a_star(int agent_id,
                           const Vertex& start,
                           const Vertex& goal,

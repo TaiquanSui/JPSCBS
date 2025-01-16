@@ -1,12 +1,12 @@
-# 收集测试源文件
+# Collect test source files
 file(GLOB_RECURSE TEST_SOURCES 
     "algorithm/*_test.cpp"
 )
 
-# 创建测试可执行文件
+# Create test executable
 add_executable(algorithm_tests ${TEST_SOURCES})
 
-# 设置包含目录和链接库
+# Set include directories and link libraries
 target_include_directories(algorithm_tests PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(algorithm_tests
     PRIVATE
@@ -15,9 +15,9 @@ target_link_libraries(algorithm_tests
     GTest::gtest_main
 )
 
-# 发现并添加测试
+# Discover and add tests
 include(GoogleTest)
 gtest_discover_tests(algorithm_tests
     PROPERTIES
-    TIMEOUT 10  # 设置测试超时时间为10秒
+    TIMEOUT 10  # Set test timeout to 10 seconds
 ) 

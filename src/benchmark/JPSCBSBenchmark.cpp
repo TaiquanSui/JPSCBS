@@ -4,7 +4,7 @@
 int main() {
     try {
         JPSCBS jpscbs;
-        jpscbs.set_time_limit(300.0);  // 设置5分钟超时
+        jpscbs.set_time_limit(300.0);  // Set 5 minutes timeout
         benchmark::run_all_scenarios(
             [&jpscbs](const std::vector<Agent>& agents, const std::vector<std::vector<int>>& grid) {
                 return jpscbs.solve(agents, grid);

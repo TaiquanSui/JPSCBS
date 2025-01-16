@@ -14,7 +14,7 @@
 #include <iostream>
 
 struct JPSCBSNode {
-    // 每个智能体的多条路径（按照代价排序）
+    // Multiple paths for each agent (sorted by cost)
     std::unordered_map<int, std::priority_queue<JPSPath, std::vector<JPSPath>, JPSPathComparator>> solution;
     std::vector<Constraint> constraints;
     int cost;
@@ -34,30 +34,29 @@ public:
     std::vector<std::vector<Vertex>> solve(const std::vector<Agent>& agents, 
                                          const std::vector<std::vector<int>>& grid);
 
-    // 设置超时时间
+    // Set timeout
     void set_time_limit(double seconds) { time_limit = seconds; }
     
-    // 获取求解时间
+    // Get solving time
     double get_elapsed_time() const;
 
 private:
-    // 存储每个智能体的所有搜索到的路径
+    // Store all paths found for each agent
     std::unordered_map<int, std::vector<JPSPath>> solutions;
     std::unordered_map<int, JPSState> agent_states;
     std::vector<std::vector<int>> grid;
     
-    // 超时相关
+    // Timeout related
     std::chrono::steady_clock::time_point start_time;
-    double time_limit = 30.0;  // 默认30秒超时
+    double time_limit = 30.0;  // Default 30 seconds timeout
     
-    // 核心函数
+    // Core functions
     JPSPath search_by_jps(const Agent& agent);
     void update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node);
     std::vector<Conflict> detect_conflicts(const JPSCBSNode& node);
     bool find_alt_symmetric_paths(JPSCBSNode& node, 
                                 const Conflict& conflict);
     
-    // 辅助函数
     void resolve_conflict_locally(JPSCBSNode& node, const Constraint& constraint);
     int calculate_sic(const std::unordered_map<int, std::priority_queue<JPSPath, 
                      std::vector<JPSPath>, JPSPathComparator>>& solution);

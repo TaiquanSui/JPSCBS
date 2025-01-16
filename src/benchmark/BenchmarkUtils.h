@@ -15,7 +15,7 @@
 namespace benchmark {
     namespace fs = std::filesystem;
 
-    // 获取项目根目录
+    // Get project root directory
     inline std::string get_project_root() {
         fs::path current_path = fs::current_path();
         while (!fs::exists(current_path / "data")) {
@@ -27,13 +27,13 @@ namespace benchmark {
         return current_path.string();
     }
 
-    // 从地图文件路径中提取地图名称
+    // Extract map name from map file path
     inline std::string get_map_name(const std::string& map_path) {
         fs::path path(map_path);
-        return path.stem().string();  // 使用 stem() 直接获取不带扩展名的文件名
+        return path.stem().string();  // Use stem() to get filename without extension
     }
 
-    // 构建场景文件路径
+    // Build scenario file path
     inline std::string make_scen_path(const std::string& scen_dir, 
                                     const std::string& map_name,
                                     const std::string& type,
@@ -52,7 +52,7 @@ namespace benchmark {
         size_t num_agents;
     };
 
-    // 运行单个场景的基准测试
+    // Run benchmark for a single scenario
     BenchmarkResult run_scenario(const std::string& map_file, 
                                const std::string& scen_file,
                                SolverFunction solver) {
@@ -89,7 +89,7 @@ namespace benchmark {
         }
     }
 
-    // 打印结果
+    // Print result
     inline void print_result(const std::string& map_file, 
                            const std::string& scen_file,
                            const BenchmarkResult& result) {
@@ -104,7 +104,7 @@ namespace benchmark {
                   << "----------------------------------------" << std::endl;
     }
 
-    // 运行所有场景的基准测试
+    // Run benchmark for all scenarios
     std::vector<BenchmarkResult> run_all_scenarios(SolverFunction solver) {
         std::vector<BenchmarkResult> results;
         
@@ -125,7 +125,7 @@ namespace benchmark {
                     std::string map_name = get_map_name(map_path);
                     utils::log_info("Testing map: " + map_name);
                     
-                    // 测试random和even场景
+                    // Test random and even scenarios
                     struct ScenType {
                         const char* name;
                         fs::path dir;

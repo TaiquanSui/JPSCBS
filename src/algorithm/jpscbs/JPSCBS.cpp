@@ -7,10 +7,10 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
     
     utils::log_info("Starting JPSCBS solver");
     
-    // 初始化根节点和solutions
+    // Initialize root node and solutions
     auto root = std::make_shared<JPSCBSNode>();
     
-    // 为每个智能体找到初始路径
+    // Find initial paths for each agent
     for (const auto& agent : agents) {
         JPSPath path = search_by_jps(agent);
         if (path.path.empty()) {
@@ -18,7 +18,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
             return {};
         }
         
-        // 验证初始路径
+        // Validate initial path
         if (!utils::validatePath(path.path, agent.start, agent.goal, grid)) {
             utils::log_error("Invalid initial path for agent " + std::to_string(agent.id));
             return {};
@@ -38,7 +38,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
     open_list.push(root);
     
     while (!open_list.empty()) {
-        // 检查超时
+        // Check timeout
         if (utils::getElapsedTime(start_time) > time_limit) {
             utils::log_warning("Time limit exceeded");
             return {};
@@ -47,10 +47,10 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         auto current = open_list.top();
         open_list.pop();
         
-        // 更新当前节点的解决方案
+        // Update current node's solution
         update_solutions(agents, *current);
         
-        // 检测冲突
+        // Detect conflicts
         auto conflicts = detect_conflicts(*current);
         
         if (conflicts.empty()) {
@@ -81,14 +81,14 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         }
     }
     
-    return {};  // 无解
+    return {};  // No solution
 }
 
 JPSPath JPSCBS::search_by_jps(const Agent& agent) {
-    // 获取或创建智能体的搜索状态
+    // Get or create agent's search state
     auto& state = agent_states[agent.id];
     
-    // 直接使用JPS搜索新路径
+    // Use JPS to search for a new path
     return jump_point_search(agent.start, agent.goal, grid, state);
 }
 
@@ -106,11 +106,11 @@ int JPSCBS::calculate_sic(const std::unordered_map<int, std::priority_queue<JPSP
 
 void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node) {
     for (auto& [agent_id, agent_paths] : node.solution) {
-        // 检查是否需要继续搜索新路径
+        // Check if we need to continue searching for a new path
         while (!agent_paths.empty() && !solutions[agent_id].empty() && 
                agent_paths.top().path.size() > solutions[agent_id].back().path.size()) {
             
-            // 继续搜索新路径
+            // Continue searching for a new path
             JPSPath new_path = search_by_jps(agents[agent_id]);
             
             if (!new_path.path.empty()) {
@@ -120,7 +120,7 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
             }
         }
         
-        // 添加所有代价更低的路径到当前节点的解决方案中
+        // Add all paths with lower cost to current node's solution
         for (const auto& path : solutions[agent_id]) {
             if (path.path.size() < agent_paths.top().path.size()) {
                 agent_paths.push(path);
@@ -133,7 +133,7 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
 std::vector<Conflict> JPSCBS::detect_conflicts(const JPSCBSNode& node) {
     std::vector<Conflict> conflicts;
     
-    // 检查所有智能体对之间的冲突
+    // Check conflicts between all agent pairs
     for (const auto& [agent1_id, paths1] : node.solution) {
         for (const auto& [agent2_id, paths2] : node.solution) {
             if (agent1_id >= agent2_id) continue;
@@ -147,26 +147,26 @@ std::vector<Conflict> JPSCBS::detect_conflicts(const JPSCBSNode& node) {
                 Vertex pos1 = t < path1.size() ? path1[t] : path1.back();
                 Vertex pos2 = t < path2.size() ? path2[t] : path2.back();
                 
-                // 检查顶点冲突
+                // Check vertex conflict
                 if (pos1 == pos2) {
                     conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
                     continue;
                 }
                 
-                // 检查交换冲突和跟随冲突
+                // Check swap conflict and following conflict
                 if (t < max_length - 1) {
                     Vertex next_pos1 = (t + 1) < path1.size() ? path1[t + 1] : path1.back();
                     Vertex next_pos2 = (t + 1) < path2.size() ? path2[t + 1] : path2.back();
                     
-                    if (pos1 == next_pos2 && pos2 == next_pos1) { // 交换冲突
+                    if (pos1 == next_pos2 && pos2 == next_pos1) { // Swap conflict
                         conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
                         continue;
                     }
-                    if (next_pos1 == pos2) { // agent1 跟随 agent2
+                    if (next_pos1 == pos2) { // agent1 follows agent2
                         conflicts.emplace_back(agent1_id, agent2_id, pos2, t);
                         continue;
                     }
-                    if (next_pos2 == pos1) { // agent2 跟随 agent1
+                    if (next_pos2 == pos1) { // agent2 follows agent1
                         conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
                         continue;
                     }
@@ -190,30 +190,30 @@ bool JPSCBS::find_alt_symmetric_paths(JPSCBSNode& node, const Conflict& conflict
 bool JPSCBS::find_local_bypass(const JPSPath& path, int agent_id, 
                                   JPSCBSNode& node, const Vertex& conflict_vertex) {
     for (const auto& interval : path.possible_intervals) {
-        // 确保interval至少包含两个点
+        // Ensure interval contains at least two points
         if (interval.jump_points.size() < 2) continue;
         
-        // 在路径中找到interval的起点和终点位置
+        // Find start and end positions of interval in path
         auto start_it = std::find(path.path.begin(), path.path.end(), interval.get_start());
         auto end_it = std::find(start_it, path.path.end(), interval.get_end());
         
-        // 验证迭代器的有效性
+            // Validate iterators
         if (start_it == path.path.end() || end_it == path.path.end() || start_it >= end_it) {
             continue;
         }
         
-        // 计算起点在路径中的时间
+        // Calculate start time in path
         int start_time = std::distance(path.path.begin(), start_it);
         
-        // 检查conflict_vertex是否在这段路径中
+        // Check if conflict_vertex is in this path segment
         auto conflict_it = std::find(start_it, end_it + 1, conflict_vertex);
         if (conflict_it == end_it + 1) continue;
         
-        // 添加临时约束
+        // Add temporary constraint
         std::vector<Constraint> temp_constraints = node.constraints;
         temp_constraints.emplace_back(agent_id, conflict_vertex, start_time);
         
-        // 尝试寻找替代路径
+        // Try to find an alternative path
         auto alt_path = a_star(agent_id, interval.get_start(), interval.get_end(), 
                              grid, temp_constraints, start_time);
         
@@ -269,13 +269,13 @@ void JPSCBS::find_and_update_solution(JPSCBSNode& node, int agent_id,
                                     std::vector<Vertex>::const_iterator start_it,
                                     std::vector<Vertex>::const_iterator end_it,
                                     int start_time) {
-    // 首先尝试在当前区间内找到路径
+    // First try to find a path within the current interval
     auto new_local_path = a_star(agent_id, start_jp, current_path.jump_points[jp_index + 1],
                                 grid, node.constraints, start_time);
     
     if (new_local_path.empty()) return;
     
-    // 检查是否是interval起点
+    // Check if it's the interval start
     bool is_interval_start = false;
     const Interval* target_interval = nullptr;
     
@@ -288,15 +288,15 @@ void JPSCBS::find_and_update_solution(JPSCBSNode& node, int agent_id,
     }
     
     if (!is_interval_start) {
-        // 直接使用当前找到的路径
+        // Use current found path directly
         update_path_with_local_solution(node, agent_id, current_path, start_it, end_it, new_local_path);
         return;
     }
     
-    // 如果是interval起点，需要检查后续跳点
+    // If it's the interval start, check subsequent jump points
     if (target_interval && target_interval->jump_points.size() > 1) {
         size_t next_jp_index = 0;
-        // 在jump_points中找到下一个跳点的索引
+        // Find index of next jump point in jump_points
         for (size_t i = jp_index + 1; i < current_path.jump_points.size(); i++) {
             if (current_path.jump_points[i] == target_interval->jump_points[1]) {
                 next_jp_index = i;
@@ -307,7 +307,7 @@ void JPSCBS::find_and_update_solution(JPSCBSNode& node, int agent_id,
         if (has_better_solution(new_local_path, 
                               current_path.jump_points[jp_index + 1],
                               target_interval->jump_points[1])) {
-            // 递归地尝试找到更长的路径
+            // Recursively try to find a longer path
             auto next_jp_it = std::find(current_path.path.begin(), current_path.path.end(), 
                                       target_interval->jump_points[1]);
             
@@ -315,7 +315,7 @@ void JPSCBS::find_and_update_solution(JPSCBSNode& node, int agent_id,
                                    start_jp, next_jp_index - 1, 
                                    start_it, next_jp_it, start_time);
         } else {
-            // 使用当前找到的路径
+            // Use current found path
             update_path_with_local_solution(node, agent_id, current_path,
                                              start_it, end_it, new_local_path);
         }
@@ -326,20 +326,20 @@ void JPSCBS::find_and_update_solution(JPSCBSNode& node, int agent_id,
 bool JPSCBS::has_better_solution(const std::vector<Vertex>& new_path, 
                                const Vertex& jp2, 
                                const Vertex& next_jp) {
-    // 计算next_jp到jp2的方向
+    // Calculate direction from next_jp to jp2
     Vertex direction = utils::calculateDirection(next_jp, jp2);
     
-    // 如果方向是水平或垂直的，不需要检查
+    // If direction is horizontal or vertical, no need to check
     if (direction.x == 0 || direction.y == 0) {
         return false;
     }
     
-    // 使用浮点数进行计算以提高精度
+    // Use floating point for calculation to improve precision
     double dx = static_cast<double>(direction.x);
     double dy = static_cast<double>(direction.y);
     
     for (size_t i = 0; i < new_path.size() - 1; i++) {
-        // 使用浮点数计算距离和y坐标
+        // Use floating point for distance and y coordinate calculation
         double distance = static_cast<double>(new_path[i].x - jp2.x) / dx;
         double y = jp2.y + dy * distance;
         
@@ -350,7 +350,7 @@ bool JPSCBS::has_better_solution(const std::vector<Vertex>& new_path,
     return false;
 }
 
-// 辅助函数：更新路径
+// Helper function: update path
 void JPSCBS::update_path_with_local_solution(JPSCBSNode& node, 
                                            int agent_id,
                                            const JPSPath& current_path,
@@ -360,51 +360,51 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
     auto& agent_paths = node.solution[agent_id];
     agent_paths.pop();
     
-    // 构建新路径
+    // Build new path
     std::vector<Vertex> new_path;
     new_path.insert(new_path.end(), current_path.path.begin(), start_it);
     new_path.insert(new_path.end(), local_path.begin(), local_path.end());
     new_path.insert(new_path.end(), end_it + 1, current_path.path.end());
     
-    // 更新跳点
+    // Update jump points
     std::vector<Vertex> new_jump_points;
     auto is_jump_point = [&](const Vertex& v) {
         return std::find(current_path.jump_points.begin(), 
                         current_path.jump_points.end(), v) != current_path.jump_points.end();
     };
     
-    // 保留起点之前的跳点
+    // Keep jump points before start point
     for (const auto& jp : current_path.jump_points) {
         if (std::find(current_path.path.begin(), start_it, jp) != start_it) {
             new_jump_points.push_back(jp);
         }
     }
     
-    // 添加local_path中的跳点
+    // Add jump points from local_path
     for (const auto& v : local_path) {
         if (is_jump_point(v)) {
             new_jump_points.push_back(v);
         }
     }
     
-    // 添加终点之后的跳点
+    // Add jump points after end point
     for (const auto& jp : current_path.jump_points) {
         if (std::find(end_it + 1, current_path.path.end(), jp) != current_path.path.end()) {
             new_jump_points.push_back(jp);
         }
     }
     
-    // 更新possible intervals
+    // Update possible intervals
     std::vector<Interval> new_intervals;
     for (const auto& interval : current_path.possible_intervals) {
-        // 检查interval是否完全在修改区域外
+        // Check if interval is completely outside the modified area
         if (std::find(current_path.path.begin(), start_it, interval.get_start()) != start_it ||
             std::find(end_it + 1, current_path.path.end(), interval.get_end()) != current_path.path.end()) {
             new_intervals.push_back(interval);
         }
     }
     
-    // 创建更新后的路径
+    // Create updated path
     JPSPath updated_path = current_path;
     updated_path.path = std::move(new_path);
     updated_path.jump_points = std::move(new_jump_points);

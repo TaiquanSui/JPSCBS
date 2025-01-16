@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "src/algorithm/jpscbs/JPSCBS.h"
+#include "src/algorithm/Utility.h"
 
 class JPSCBSTest : public ::testing::Test {
 protected:
@@ -7,7 +8,7 @@ protected:
     std::vector<std::vector<int>> grid;
     
     void SetUp() override {
-        // 创建一个简单的4x4网格
+        // Create a simple 4x4 grid
         grid = {
             {0, 0, 0, 0},
             {0, 1, 0, 0},
@@ -39,10 +40,10 @@ TEST_F(JPSCBSTest, NoSolution) {
 }
 
 TEST_F(JPSCBSTest, TimeLimit) {
-    solver.set_time_limit(0.001);  // 设置很短的超时时间
+    solver.set_time_limit(0.001);  // Set a very short timeout
     
     std::vector<Agent> agents;
-    // 添加多个智能体使问题变得复杂
+    // Add multiple agents to make the problem complex
     for (int i = 0; i < 10; ++i) {
         agents.emplace_back(i, Vertex{0, i}, Vertex{3, 3-i});
     }
@@ -53,7 +54,7 @@ TEST_F(JPSCBSTest, TimeLimit) {
 
 TEST_F(JPSCBSTest, PathValidation) {
     Agent agent{0, Vertex{0, 0}, Vertex{3, 3}};
-    std::vector<Vertex> path = {{0, 0}, {0, 1}, {1, 1}, {1, 2}, {2, 2}, {3, 3}};
+    std::vector<Vertex> path = {Vertex{0, 0}, Vertex{0, 1}, Vertex{1, 1}, Vertex{1, 2}, Vertex{2, 2}, Vertex{3, 3}};
     
-    ASSERT_TRUE(solver.validate_path(path, agent));
+    ASSERT_TRUE(utils::validatePath(path, agent.start, agent.goal, grid));
 } 

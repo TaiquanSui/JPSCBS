@@ -19,16 +19,16 @@ struct JPSState {
 };
 
 struct Interval {
-    std::vector<Vertex> jump_points;  // 按顺序存储interval中的所有跳点
+    std::vector<Vertex> jump_points;  // Store all jump points in the interval in order
 
     Interval(const std::vector<Vertex>& points) : jump_points(points) {}
     
-    // 获取interval的起点
+    // Get interval start point
     Vertex get_start() const {
         return jump_points.front();
     }
     
-    // 获取interval的终点
+    // Get interval end point
     Vertex get_end() const {
         return jump_points.back();
     }
@@ -45,7 +45,7 @@ struct JPSPath {
 
 struct JPSPathComparator {
     bool operator()(const JPSPath& a, const JPSPath& b) const {
-        return a.path.size() > b.path.size(); // 基于路径长度的优先级
+        return a.path.size() > b.path.size();
     }
 };
 

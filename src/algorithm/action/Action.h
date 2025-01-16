@@ -23,7 +23,7 @@ namespace Action {
     extern const std::vector<Vertex> DIRECTIONS_4;
     extern const std::vector<Vertex> MOVEMENTS_9;
     extern const std::vector<Vertex> MOVEMENTS_5;
-    extern const std::unordered_map<Move, Vertex> MOVEMENT_MAP;  // 方向映射
+    extern const std::unordered_map<Move, Vertex> MOVEMENT_MAP;  // Direction map
 }
 
 #endif // ACTION_H

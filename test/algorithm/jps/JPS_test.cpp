@@ -37,7 +37,7 @@ TEST_F(JPSTest, JumpPointsExist) {
 }
 
 TEST_F(JPSTest, NoPath) {
-    // 创建一个被障碍物包围的目标点
+    // Create a goal point surrounded by obstacles
     grid[2][2] = 1;
     grid[2][3] = 1;
     grid[3][2] = 1;
