@@ -19,10 +19,19 @@ struct JPSState {
 };
 
 struct Interval {
-    Vertex jump_point1;
-    Vertex jump_point2;
+    std::vector<Vertex> jump_points;  // 按顺序存储interval中的所有跳点
 
-    Interval(Vertex jp1, Vertex jp2) : jump_point1(jp1), jump_point2(jp2) {}
+    Interval(const std::vector<Vertex>& points) : jump_points(points) {}
+    
+    // 获取interval的起点
+    Vertex get_start() const {
+        return jump_points.front();
+    }
+    
+    // 获取interval的终点
+    Vertex get_end() const {
+        return jump_points.back();
+    }
 };
 
 struct JPSPath {

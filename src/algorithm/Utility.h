@@ -4,6 +4,8 @@
 #include "Vertex.h"
 #include <vector>
 #include <cmath>
+#include <chrono>
+#include <iostream>
 
 namespace utils {
     inline bool isWalkable(const std::vector<std::vector<int>>& grid, const Vertex& pos) {
@@ -54,6 +56,91 @@ namespace utils {
 
     inline bool isStraight(const Vertex& dir) {
         return dir.x == 0 || dir.y == 0;
+    }
+
+    inline bool validatePath(const std::vector<Vertex>& path, 
+                           const Vertex& start, 
+                           const Vertex& goal,
+                           const std::vector<std::vector<int>>& grid) {
+        if (path.empty()) return false;
+        
+        // 检查起点和终点
+        if (path.front() != start || path.back() != goal) {
+            return false;
+        }
+        
+        // 检查路径连续性
+        for (size_t i = 0; i < path.size() - 1; ++i) {
+            const auto& current = path[i];
+            const auto& next = path[i + 1];
+            
+            // 检查相邻点是否合法移动
+            if (abs(current.x - next.x) > 1 || abs(current.y - next.y) > 1) {
+                return false;
+            }
+            
+            // 检查是否穿墙
+            if (!isWalkable(grid, next.x, next.y)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    inline bool validate_constraints(const std::vector<Vertex>& path,
+                                const std::vector<Constraint>& constraints) {
+        for (const auto& constraint : constraints) {
+            if (constraint.time < path.size() && 
+                path[constraint.time] == constraint.vertex) {
+                log_error("Path violates constraint at time " + 
+                         std::to_string(constraint.time));
+                return false;
+            }
+        }
+    return true;
+}
+
+    inline double getElapsedTime(const std::chrono::steady_clock::time_point& start_time) {
+        auto current_time = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>
+                       (current_time - start_time);
+        return duration.count() / 1000.0;
+    }
+
+    // 日志级别枚举
+    enum class LogLevel {
+        INFO,
+        WARNING,
+        ERROR
+    };
+
+    // 日志记录函数
+    inline void log(LogLevel level, const std::string& message) {
+        switch (level) {
+            case LogLevel::INFO:
+                std::cout << "[INFO] " << message << std::endl;
+                break;
+            case LogLevel::WARNING:
+                std::cout << "\033[33m[WARNING] " << message << "\033[0m" << std::endl;
+                break;
+            case LogLevel::ERROR:
+                std::cout << "\033[31m[ERROR] " << message << "\033[0m" << std::endl;
+                break;
+        }
+    }
+
+    // 便捷的日志记录函数
+    inline void log_info(const std::string& message) {
+        log(LogLevel::INFO, message);
+    }
+
+    inline void log_warning(const std::string& message) {
+        log(LogLevel::WARNING, message);
+    }
+
+    inline void log_error(const std::string& message) {
+        log(LogLevel::ERROR, message);
     }
 }
 

@@ -135,8 +135,14 @@ namespace {
                     bool is_diagonal_end = utils::isDiagonal(all_jump_points[j-1], curr_point);
                     const auto& interval_end = is_diagonal_end ? all_jump_points[j - 1] : curr_point;
                     
+                    // 收集区间内的所有跳点
+                    std::vector<Vertex> interval_points;
+                    for (size_t k = i; k <= (is_diagonal_end ? j - 1 : j); ++k) {
+                        interval_points.push_back(all_jump_points[k]);
+                    }
+                    
                     // 记录区间和更新索引
-                    possible_intervals.emplace_back(current, interval_end);
+                    possible_intervals.emplace_back(interval_points);
                     i = j - (is_diagonal_end ? 1 : 0);
                     break;
                 }

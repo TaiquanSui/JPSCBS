@@ -63,7 +63,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
                 child.solution[agent.id] = new_path;
                 child.cost = 0;
                 for (const auto& [_, path] : child.solution) {
-                    child.cost += path.size();
+                    child.cost += path.size() - 1;
                 }
                 open_list.push(child);
             }
@@ -126,7 +126,7 @@ std::vector<Conflict> CBS::detect_conflicts(const CBSNode& node) {
 std::vector<Vertex> CBS::find_path(const Agent& agent,
                                  const std::vector<std::vector<int>>& grid,
                                  const std::vector<Constraint>& constraints) {
-    return a_star(agent, grid, constraints);
+    return a_star(agent.id, agent.start, agent.goal, grid, constraints);
 }
 
             
@@ -140,7 +140,7 @@ bool CBS::find_bypass(CBSNode& node, const Agent& agent, const Vertex& conflict_
     temp_constraints.emplace_back(agent.id, conflict_vertex, conflict_time);
     
     // 使用临时约束集进行搜索
-    auto path = a_star(agent, grid, temp_constraints);
+    auto path = a_star(agent.id, agent.start, agent.goal, grid, temp_constraints);
 
     // 如果找到相同长度的路径，则更新解决方案（但不更新约束）
     if (!path.empty() && path.size() == original_path.size()) {

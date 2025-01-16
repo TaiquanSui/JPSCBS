@@ -6,7 +6,6 @@
 #include "../Heuristic.h"
 #include "../Utility.h"
 #include "../cbs/CBS.h"
-#include "../Agent.h"
 #include <vector>
 #include <queue>
 #include <unordered_map>
@@ -39,10 +38,11 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
                           const std::vector<std::vector<int>>& grid);
 
 // 带约束的A*搜索
-std::vector<Vertex> a_star(const Agent& agent,
+std::vector<Vertex> a_star(int agent_id,
+                          const Vertex& start,
+                          const Vertex& goal,
                           const std::vector<std::vector<int>>& grid,
                           const std::vector<Constraint>& constraints,
                           int start_time = 0);
-
 
 #endif // ASTAR_H

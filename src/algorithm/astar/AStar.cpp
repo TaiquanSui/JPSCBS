@@ -71,24 +71,26 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
     return {};
 }
 
-std::vector<Vertex> a_star(const Agent& agent,
+std::vector<Vertex> a_star(int agent_id,
+                          const Vertex& start,
+                          const Vertex& goal,
                           const std::vector<std::vector<int>>& grid,
                           const std::vector<Constraint>& constraints,
-                          int start_time) {
+                          int start_time = 0) {
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 
                        AStarNodeComparator> open_list;
     std::unordered_map<Vertex, double, VertexHash> closed_list;
 
     auto start_node = std::make_shared<AStarNode>(
-        agent.start, 0, heuristic(agent.start, agent.goal), nullptr, start_time);
+        start, 0, heuristic(start, goal), nullptr, start_time);
     open_list.push(start_node);
 
     while (!open_list.empty()) {
         auto current = open_list.top();
         open_list.pop();
 
-        if (current->pos == agent.goal) {
+        if (current->pos == goal) {
             return reconstruct_path(current);
         }
 
@@ -97,7 +99,7 @@ std::vector<Vertex> a_star(const Agent& agent,
         }
         closed_list[current->pos] = current->g;
 
-        if (check_constraints(constraints, agent.id, current->pos, current->time)) {
+        if (check_constraints(constraints, agent_id, current->pos, current->time)) {
             continue;
         }
 
@@ -109,7 +111,7 @@ std::vector<Vertex> a_star(const Agent& agent,
                 continue;
             }
 
-            if (check_constraints(constraints, agent.id, next_pos, next_time)) {
+            if (check_constraints(constraints, agent_id, next_pos, next_time)) {
                 continue;
             }
 
@@ -121,7 +123,7 @@ std::vector<Vertex> a_star(const Agent& agent,
             closed_list[next_pos] = tentative_g;
 
             auto next_node = std::make_shared<AStarNode>(
-                next_pos, tentative_g, heuristic(next_pos, agent.goal), current, next_time);
+                next_pos, tentative_g, heuristic(next_pos, goal), current, next_time);
             open_list.push(next_node);
         }
     }

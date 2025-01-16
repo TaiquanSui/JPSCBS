@@ -55,8 +55,8 @@ std::vector<std::vector<int>> load_map(const std::string& filename) {
     return grid;
 }
 
-std::vector<std::pair<Vertex, Vertex>> load_scen(const std::string& filename) {
-    std::vector<std::pair<Vertex, Vertex>> scenarios;
+std::vector<Agent> load_scen(const std::string& filename) {
+    std::vector<Agent> agents;
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Cannot open scenario file: " + filename);
@@ -66,6 +66,7 @@ std::vector<std::pair<Vertex, Vertex>> load_scen(const std::string& filename) {
     // 跳过第一行（版本信息）
     std::getline(file, line);
 
+    int agent_id = 0;  // 为每个场景分配一个唯一的智能体ID
     // 读取每一行场景
     while (std::getline(file, line)) {
         std::istringstream iss(line);
@@ -82,17 +83,13 @@ std::vector<std::pair<Vertex, Vertex>> load_scen(const std::string& filename) {
             continue;  // 跳过无效行
         }
 
-        // 创建起点和终点的Vertex
-        Vertex start(start_x, start_y);
-        Vertex goal(goal_x, goal_y);
-        
-        // 添加到场景列表
-        scenarios.emplace_back(start, goal);
+        // 创建新的智能体
+        agents.emplace_back(agent_id++, Vertex(start_x, start_y), Vertex(goal_x, goal_y));
     }
 
-    if (scenarios.empty()) {
+    if (agents.empty()) {
         throw std::runtime_error("No valid scenarios found in file: " + filename);
     }
 
-    return scenarios;
+    return agents;
 }
