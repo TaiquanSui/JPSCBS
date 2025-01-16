@@ -11,7 +11,7 @@ std::vector<std::vector<int>> load_map(const std::string& filename) {
     std::string line;
     int width = 0, height = 0;
 
-    // 读取地图信息
+    // Read map information
     std::getline(file, line); // type octile
     std::getline(file, line); // height
     sscanf(line.c_str(), "height %d", &height);
@@ -23,19 +23,19 @@ std::vector<std::vector<int>> load_map(const std::string& filename) {
         throw std::runtime_error("Invalid map dimensions");
     }
 
-    // 读取地图数据
+    // Read map data
     std::vector<std::vector<int>> grid;
     while (std::getline(file, line)) {
-        if (line.empty()) continue;  // 跳过空行
+        if (line.empty()) continue;  // Skip empty lines
         
         std::vector<int> row;
-        row.reserve(width);  // 预分配内存以提高性能
+        row.reserve(width);  // Preallocate memory for performance
         
         for (char cell : line) {
             if (cell == '.') {
-                row.push_back(0);  // 可通行区域
+                row.push_back(0);  // Passable area
             } else if (cell == '@' || cell == 'T') {
-                row.push_back(1);  // 障碍物
+                row.push_back(1);  // Obstacle
             }
         }
 
@@ -63,11 +63,11 @@ std::vector<Agent> load_scen(const std::string& filename) {
     }
 
     std::string line;
-    // 跳过第一行（版本信息）
+    // Skip first line (version information)
     std::getline(file, line);
 
-    int agent_id = 0;  // 为每个场景分配一个唯一的智能体ID
-    // 读取每一行场景
+    int agent_id = 0;  // Assign a unique agent ID to each scenario
+    // Read each line of scenario
     while (std::getline(file, line)) {
         std::istringstream iss(line);
         int bucket;
@@ -76,14 +76,14 @@ std::vector<Agent> load_scen(const std::string& filename) {
         int start_x, start_y, goal_x, goal_y;
         float optimal_length;
 
-        // 解析行数据
+        // Parse line data
         if (!(iss >> bucket >> map_name >> height >> width 
               >> start_x >> start_y >> goal_x >> goal_y 
               >> optimal_length)) {
-            continue;  // 跳过无效行
+            continue;  // Skip invalid lines
         }
 
-        // 创建新的智能体
+        // Create new agent
         agents.emplace_back(agent_id++, Vertex(start_x, start_y), Vertex(goal_x, goal_y));
     }
 

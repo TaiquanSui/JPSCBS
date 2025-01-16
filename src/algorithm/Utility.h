@@ -9,6 +9,41 @@
 #include <iostream>
 
 namespace utils {
+    // Log level enum
+    enum class LogLevel {
+        INFO,
+        WARNING,
+        ERROR
+    };
+
+    // Log function
+    inline void log(LogLevel level, const std::string& message) {
+        switch (level) {
+            case LogLevel::INFO:
+                std::cout << "[INFO] " << message << std::endl;
+                break;
+            case LogLevel::WARNING:
+                std::cout << "\033[33m[WARNING] " << message << "\033[0m" << std::endl;
+                break;
+            case LogLevel::ERROR:
+                std::cout << "\033[31m[ERROR] " << message << "\033[0m" << std::endl;
+                break;
+        }
+    }
+
+    // Convenient log functions - declare these before they are used
+    inline void log_info(const std::string& message) {
+        log(LogLevel::INFO, message);
+    }
+
+    inline void log_warning(const std::string& message) {
+        log(LogLevel::WARNING, message);
+    }
+
+    inline void log_error(const std::string& message) {
+        log(LogLevel::ERROR, message);
+    }
+
     inline bool isWalkable(const std::vector<std::vector<int>>& grid, const Vertex& pos) {
         return pos.x >= 0 && pos.x < grid.size() && 
                pos.y >= 0 && pos.y < grid[0].size() && 
@@ -107,41 +142,6 @@ namespace utils {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>
                        (current_time - start_time);
         return duration.count() / 1000.0;
-    }
-
-    // Log level enum
-    enum class LogLevel {
-        INFO,
-        WARNING,
-        ERROR
-    };
-
-    // Log function
-    inline void log(LogLevel level, const std::string& message) {
-        switch (level) {
-            case LogLevel::INFO:
-                std::cout << "[INFO] " << message << std::endl;
-                break;
-            case LogLevel::WARNING:
-                std::cout << "\033[33m[WARNING] " << message << "\033[0m" << std::endl;
-                break;
-            case LogLevel::ERROR:
-                std::cout << "\033[31m[ERROR] " << message << "\033[0m" << std::endl;
-                break;
-        }
-    }
-
-    // Convenient log function
-    inline void log_info(const std::string& message) {
-        log(LogLevel::INFO, message);
-    }
-
-    inline void log_warning(const std::string& message) {
-        log(LogLevel::WARNING, message);
-    }
-
-    inline void log_error(const std::string& message) {
-        log(LogLevel::ERROR, message);
     }
 }
 

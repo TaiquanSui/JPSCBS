@@ -76,7 +76,7 @@ std::vector<Vertex> a_star(int agent_id,
                           const Vertex& goal,
                           const std::vector<std::vector<int>>& grid,
                           const std::vector<Constraint>& constraints,
-                          int start_time = 0) {
+                          int start_time) {
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 
                        AStarNodeComparator> open_list;

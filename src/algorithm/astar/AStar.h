@@ -37,7 +37,7 @@ struct AStarNodeComparator {
 std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal, 
                           const std::vector<std::vector<int>>& grid);
 
-// A* search with constraints
+// Constrained A* search
 std::vector<Vertex> a_star(int agent_id,
                           const Vertex& start,
                           const Vertex& goal,
