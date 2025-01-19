@@ -14,22 +14,25 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
     for (const auto& agent : agents) {
         JPSPath path = search_by_jps(agent);
         if (path.path.empty()) {
-            utils::log_error("No initial path found for agent " + std::to_string(agent.id));
+            utils::log_info("No initial path found for agent " + std::to_string(agent.id));
             return {};
         }
         
         // Validate initial path
         if (!utils::validatePath(path.path, agent.start, agent.goal, grid)) {
-            utils::log_error("Invalid initial path for agent " + std::to_string(agent.id));
+            utils::log_info("Invalid initial path for agent " + std::to_string(agent.id));
             return {};
         }
         
-        solutions[agent.id].push_back(path);
+        solutions[agent.id].push_back(path);  // 存储原始路径
+        
+        // 创建新的优先队列并使用path的深拷贝
         std::priority_queue<JPSPath, std::vector<JPSPath>, JPSPathComparator> paths;
-        paths.push(path);
-        root->solution[agent.id] = paths;
+        paths.push(JPSPath(path));  // 创建并存储path的深拷贝
+        
+        root->solution[agent.id] = std::move(paths);  // 移动优先队列的所有权到root节点
     }
-    
+
     root->cost = calculate_sic(root->solution);
     
     std::priority_queue<std::shared_ptr<JPSCBSNode>, 
@@ -39,7 +42,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
     
     while (!open_list.empty()) {
         // Check timeout
-        if (utils::getElapsedTime(start_time) > time_limit) {
+        if (is_timeout()) {
             utils::log_warning("Time limit exceeded");
             return {};
         }
@@ -121,9 +124,10 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
         }
         
         // Add all paths with lower cost to current node's solution
-        for (const auto& path : solutions[agent_id]) {
+        for (size_t i = agent_paths.size(); i < solutions[agent_id].size(); i++) {
+            JPSPath path = solutions[agent_id][i];  // 创建一个深拷贝
             if (path.path.size() < agent_paths.top().path.size()) {
-                agent_paths.push(path);
+                agent_paths.push(std::move(path));  // 使用移动语义避免额外拷贝
             }
         }
     }
@@ -133,45 +137,15 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
 std::vector<Conflict> JPSCBS::detect_conflicts(const JPSCBSNode& node) {
     std::vector<Conflict> conflicts;
     
-    // Check conflicts between all agent pairs
-    for (const auto& [agent1_id, paths1] : node.solution) {
-        for (const auto& [agent2_id, paths2] : node.solution) {
-            if (agent1_id >= agent2_id) continue;
+    for (const auto& [agent1, paths1] : node.solution) {
+        for (const auto& [agent2, paths2] : node.solution) {
+            if (agent1 >= agent2) continue;
             
             const auto& path1 = paths1.top().path;
             const auto& path2 = paths2.top().path;
             
-            size_t max_length = std::max(path1.size(), path2.size());
-            
-            for (size_t t = 0; t < max_length; ++t) {
-                Vertex pos1 = t < path1.size() ? path1[t] : path1.back();
-                Vertex pos2 = t < path2.size() ? path2[t] : path2.back();
-                
-                // Check vertex conflict
-                if (pos1 == pos2) {
-                    conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
-                    continue;
-                }
-                
-                // Check swap conflict and following conflict
-                if (t < max_length - 1) {
-                    Vertex next_pos1 = (t + 1) < path1.size() ? path1[t + 1] : path1.back();
-                    Vertex next_pos2 = (t + 1) < path2.size() ? path2[t + 1] : path2.back();
-                    
-                    if (pos1 == next_pos2 && pos2 == next_pos1) { // Swap conflict
-                        conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
-                        continue;
-                    }
-                    if (next_pos1 == pos2) { // agent1 follows agent2
-                        conflicts.emplace_back(agent1_id, agent2_id, pos2, t);
-                        continue;
-                    }
-                    if (next_pos2 == pos1) { // agent2 follows agent1
-                        conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
-                        continue;
-                    }
-                }
-            }
+            auto path_conflicts = utils::detect_path_conflicts(agent1, agent2, path1, path2);
+            conflicts.insert(conflicts.end(), path_conflicts.begin(), path_conflicts.end());
         }
     }
     
@@ -227,8 +201,8 @@ bool JPSCBS::find_local_bypass(const JPSPath& path, int agent_id,
             new_path.insert(new_path.end(), end_it + 1, path.path.end());
 
             JPSPath updated_path = path;
-            updated_path.path = new_path;
-            agent_paths.push(updated_path);
+            updated_path.path = std::move(new_path);
+            agent_paths.push(std::move(updated_path));
             return true;
         }
     }
@@ -394,21 +368,10 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
         }
     }
     
-    // Update possible intervals
-    std::vector<Interval> new_intervals;
-    for (const auto& interval : current_path.possible_intervals) {
-        // Check if interval is completely outside the modified area
-        if (std::find(current_path.path.begin(), start_it, interval.get_start()) != start_it ||
-            std::find(end_it + 1, current_path.path.end(), interval.get_end()) != current_path.path.end()) {
-            new_intervals.push_back(interval);
-        }
-    }
-    
     // Create updated path
     JPSPath updated_path = current_path;
     updated_path.path = std::move(new_path);
     updated_path.jump_points = std::move(new_jump_points);
-    updated_path.possible_intervals = std::move(new_intervals);
     
     agent_paths.push(std::move(updated_path));
 }

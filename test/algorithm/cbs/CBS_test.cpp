@@ -21,7 +21,7 @@ TEST_F(CBSTest, SimplePathFinding) {
         Agent{0, Vertex{0, 0}, Vertex{3, 3}},
         Agent{1, Vertex{0, 3}, Vertex{3, 0}}
     };
-    
+
     auto paths = solver.solve(agents, grid);
     ASSERT_FALSE(paths.empty());
     ASSERT_EQ(paths.size(), 2);
@@ -32,7 +32,7 @@ TEST_F(CBSTest, NoSolution) {
         Agent{0, Vertex{0, 0}, Vertex{0, 1}},
         Agent{1, Vertex{0, 1}, Vertex{0, 0}}
     };
-    
+
     auto paths = solver.solve(agents, grid);
     ASSERT_TRUE(paths.empty());
 }
@@ -42,12 +42,12 @@ TEST_F(CBSTest, ConflictResolution) {
         Agent{0, Vertex{0, 0}, Vertex{2, 2}},
         Agent{1, Vertex{0, 2}, Vertex{2, 0}}
     };
-    
+
     auto paths = solver.solve(agents, grid);
     ASSERT_FALSE(paths.empty());
-    
+
     // Verify reasonable path lengths
     for (const auto& path : paths) {
         ASSERT_LE(path.size(), 5);  // Maximum path length should not exceed 5 steps
     }
-} 
+}

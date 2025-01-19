@@ -1,4 +1,4 @@
-#include "../Utility.h"
+#include "../utilities/Utility.h"
 #include "JPS.h"
 #include <algorithm>
 
@@ -24,12 +24,12 @@ namespace {
     }
 
     bool check_straight_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
-        if (dx != 0) { // Horizontal move
-            return utils::isWalkable(grid, x, y + 1) || 
-                   utils::isWalkable(grid, x, y - 1);
-        } else { // Vertical move
-            return utils::isWalkable(grid, x + 1, y) || 
-                   utils::isWalkable(grid, x - 1, y);
+        if (dx != 0) {
+            return (!utils::isWalkable(grid, x, y - 1) && utils::isWalkable(grid, x + dx, y - 1)) ||
+                   (!utils::isWalkable(grid, x, y + 1) && utils::isWalkable(grid, x + dx, y + 1));
+        } else {
+            return (!utils::isWalkable(grid, x - 1, y) && utils::isWalkable(grid, x - 1, y + dy)) ||
+                   (!utils::isWalkable(grid, x + 1, y) && utils::isWalkable(grid, x + 1, y + dy));
         }
     }
 
@@ -248,17 +248,19 @@ namespace {
 
 JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                          const std::vector<std::vector<int>>& grid,
-                         JPSState& state) {
+                         std::priority_queue<std::shared_ptr<AStarNode>, 
+                                          std::vector<std::shared_ptr<AStarNode>>, 
+                                          AStarNodeComparator>& open_list) {
     // Initialize starting node on first search
-    if (state.open_list.empty()) {
+    if (open_list.empty()) {
         auto start_node = std::make_shared<AStarNode>(
             start, 0, heuristic(start, goal));
-        state.open_list.push(start_node);
+        open_list.push(start_node);
     }
 
-    while (!state.open_list.empty()) {
-        auto current = state.open_list.top();
-        state.open_list.pop();
+    while (!open_list.empty()) {
+        auto current = open_list.top();
+        open_list.pop();
 
         if (current->pos == goal) {
             return reconstruct_path(current);
@@ -281,11 +283,10 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                 heuristic(jump_point, goal),
                 current
             );
-            state.open_list.push(next_node);
+            open_list.push(next_node);
         }
     }
 
-    state.is_complete = true;
     return JPSPath({}, {}, {});
 }
 

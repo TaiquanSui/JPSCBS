@@ -4,7 +4,7 @@
 #include "../Vertex.h"
 #include "../action/Action.h"
 #include "../Heuristic.h"
-#include "../Utility.h"
+#include "../utilities/Utility.h"
 #include "../cbs/CBS.h"
 #include <vector>
 #include <queue>

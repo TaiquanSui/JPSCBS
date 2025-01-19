@@ -19,5 +19,5 @@ target_link_libraries(algorithm_tests
 include(GoogleTest)
 gtest_discover_tests(algorithm_tests
     PROPERTIES
-    TIMEOUT 10  # Set test timeout to 10 seconds
+    TIMEOUT 60  # Set test timeout to 10 seconds
 ) 

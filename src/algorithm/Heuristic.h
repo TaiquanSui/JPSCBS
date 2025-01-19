@@ -1,7 +1,7 @@
 #ifndef HEURISTIC_H
 #define HEURISTIC_H
 
-#include "Utility.h"
+#include "utilities/Utility.h"
 #include "Vertex.h"
 #include <cmath>
 

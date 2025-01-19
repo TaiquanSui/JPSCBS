@@ -1,49 +1,13 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
-#include "Vertex.h"
-#include "cbs/CBS.h"
+#include "../Vertex.h"
+#include "../cbs/CBS.h"
 #include <vector>
 #include <cmath>
 #include <chrono>
-#include <iostream>
 
 namespace utils {
-    // Log level enum
-    enum class LogLevel {
-        INFO,
-        WARNING,
-        ERROR
-    };
-
-    // Log function
-    inline void log(LogLevel level, const std::string& message) {
-        switch (level) {
-            case LogLevel::INFO:
-                std::cout << "[INFO] " << message << std::endl;
-                break;
-            case LogLevel::WARNING:
-                std::cout << "\033[33m[WARNING] " << message << "\033[0m" << std::endl;
-                break;
-            case LogLevel::ERROR:
-                std::cout << "\033[31m[ERROR] " << message << "\033[0m" << std::endl;
-                break;
-        }
-    }
-
-    // Convenient log functions - declare these before they are used
-    inline void log_info(const std::string& message) {
-        log(LogLevel::INFO, message);
-    }
-
-    inline void log_warning(const std::string& message) {
-        log(LogLevel::WARNING, message);
-    }
-
-    inline void log_error(const std::string& message) {
-        log(LogLevel::ERROR, message);
-    }
-
     inline bool isWalkable(const std::vector<std::vector<int>>& grid, const Vertex& pos) {
         return pos.x >= 0 && pos.x < grid.size() && 
                pos.y >= 0 && pos.y < grid[0].size() && 
@@ -124,24 +88,70 @@ namespace utils {
         return true;
     }
 
-    inline bool validate_constraints(const std::vector<Vertex>& path,
-                                const std::vector<Constraint>& constraints) {
+    inline bool validate_constraints(const std::vector<Constraint>& constraints, 
+                                   int agent_id, const Vertex& pos, int time) {
         for (const auto& constraint : constraints) {
-            if (constraint.time < path.size() && 
-                path[constraint.time] == constraint.vertex) {
-                log_error("Path violates constraint at time " + 
-                         std::to_string(constraint.time));
-                return false;
+            if (constraint.agent == agent_id && 
+                constraint.vertex == pos && 
+                constraint.time == time) {
+                return false;  // violate constraint
             }
         }
-    return true;
-}
+        return true;  // satisfy all constraints
+    }
 
     inline double getElapsedTime(const std::chrono::steady_clock::time_point& start_time) {
         auto current_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>
                        (current_time - start_time);
         return duration.count() / 1000.0;
+    }
+
+    // detect path conflicts between two agents
+    inline std::vector<Conflict> detect_path_conflicts(
+        int agent1_id, int agent2_id,
+        const std::vector<Vertex>& path1,
+        const std::vector<Vertex>& path2
+    ) {
+        std::vector<Conflict> conflicts;
+        size_t max_length = std::max(path1.size(), path2.size());
+        
+        // check each time step
+        for (size_t t = 0; t < max_length; ++t) {
+            // get current position (if path ends, use goal)
+            Vertex pos1 = t < path1.size() ? path1[t] : path1.back();
+            Vertex pos2 = t < path2.size() ? path2[t] : path2.back();
+
+            // check vertex conflict
+            if (pos1 == pos2) {
+                conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
+                continue;
+            }
+
+            // check following and swapping conflicts
+            if (t < max_length - 1) {
+                Vertex next_pos1 = (t + 1) < path1.size() ? path1[t + 1] : path1.back();
+                Vertex next_pos2 = (t + 1) < path2.size() ? path2[t + 1] : path2.back();
+                
+                // check swapping conflict
+                if (pos1 == next_pos2 && pos2 == next_pos1) {
+                    conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
+                    conflicts.emplace_back(agent1_id, agent2_id, pos2, t);
+                    continue;
+                }
+                
+                // check following conflict
+                if (next_pos1 == pos2) { // agent1 follows agent2
+                    conflicts.emplace_back(agent1_id, agent2_id, pos2, t);
+                    continue;
+                }
+                if (next_pos2 == pos1) { // agent2 follows agent1
+                    conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
+                    continue;
+                }
+            }
+        }
+        return conflicts;
     }
 }
 

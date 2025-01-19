@@ -12,18 +12,6 @@ namespace {
         std::reverse(path.begin(), path.end());
         return path;
     }
-
-    bool check_constraints(const std::vector<Constraint>& constraints, 
-                         int agent_id, const Vertex& pos, int time) {
-        for (const auto& constraint : constraints) {
-            if (constraint.agent == agent_id && 
-                constraint.vertex == pos && 
-                constraint.time == time) {
-                return true;
-            }
-        }
-        return false;
-    }
 }
 
 std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
@@ -44,11 +32,6 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
             return reconstruct_path(current);
         }
 
-        if (closed_list.count(current->pos) && closed_list[current->pos] <= current->g) {
-            continue;
-        }
-        closed_list[current->pos] = current->g;
-
         for (const auto& move : Action::MOVEMENTS_9) {
             Vertex neighbor(current->pos.x + move.x, current->pos.y + move.y);
 
@@ -61,6 +44,8 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
             if (closed_list.count(neighbor) && closed_list[neighbor] <= tentative_g) {
                 continue;
             }
+
+            closed_list[neighbor] = tentative_g;
 
             auto neighbor_node = std::make_shared<AStarNode>(
                 neighbor, tentative_g, heuristic(neighbor, goal), current);
@@ -94,15 +79,6 @@ std::vector<Vertex> a_star(int agent_id,
             return reconstruct_path(current);
         }
 
-        if (closed_list.count(current->pos) && closed_list[current->pos] <= current->g) {
-            continue;
-        }
-        closed_list[current->pos] = current->g;
-
-        if (check_constraints(constraints, agent_id, current->pos, current->time)) {
-            continue;
-        }
-
         for (const auto& move : Action::MOVEMENTS_9) {
             Vertex next_pos(current->pos.x + move.x, current->pos.y + move.y);
             int next_time = current->time + 1;
@@ -111,7 +87,7 @@ std::vector<Vertex> a_star(int agent_id,
                 continue;
             }
 
-            if (check_constraints(constraints, agent_id, next_pos, next_time)) {
+            if (!utils::validate_constraints(constraints, agent_id, next_pos, next_time)) {
                 continue;
             }
 
@@ -121,7 +97,7 @@ std::vector<Vertex> a_star(int agent_id,
                 continue;
             }
             closed_list[next_pos] = tentative_g;
-
+            
             auto next_node = std::make_shared<AStarNode>(
                 next_pos, tentative_g, heuristic(next_pos, goal), current, next_time);
             open_list.push(next_node);

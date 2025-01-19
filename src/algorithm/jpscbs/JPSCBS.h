@@ -6,6 +6,7 @@
 #include "../Agent.h"
 #include "../cbs/CBS.h"
 #include "../astar/Astar.h"
+#include "../utilities/Log.h"
 #include <unordered_map>
 #include <queue>
 #include <vector>
@@ -36,14 +37,13 @@ public:
 
     // Set timeout
     void set_time_limit(double seconds) { time_limit = seconds; }
-    
-    // Get solving time
-    double get_elapsed_time() const;
 
 private:
     // Store all paths found for each agent
     std::unordered_map<int, std::vector<JPSPath>> solutions;
-    std::unordered_map<int, JPSState> agent_states;
+    std::unordered_map<int, std::priority_queue<std::shared_ptr<AStarNode>, 
+                                               std::vector<std::shared_ptr<AStarNode>>, 
+                                               AStarNodeComparator>> agent_states;
     std::vector<std::vector<int>> grid;
     
     // Timeout related
@@ -78,6 +78,12 @@ private:
     bool find_local_bypass(const JPSPath& path, int agent_id, 
                               JPSCBSNode& node, const Vertex& conflict_vertex);
     
+    bool is_timeout() const {
+        auto current_time = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>
+                       (current_time - start_time);
+        return duration.count() / 1000.0 > time_limit;
+    }
 };
 
 #endif // JPSCBS_H

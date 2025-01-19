@@ -2,15 +2,22 @@
 #include "../astar/AStar.h"
 #include <queue>
 #include <algorithm>
+#include <chrono>
+#include <sstream>
 
 std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
                                           const std::vector<std::vector<int>>& grid) {
+    start_time = std::chrono::steady_clock::now();
+    
     CBSNode root;
     
     // Find initial paths for each agent
     for (const auto& agent : agents) {
         auto path = find_path(agent, grid, {});
-        if (path.empty()) return {}; // No solution
+        if (path.empty()) {
+            utils::log_info("cbs no solution");
+            return {};
+        } // No solution
         root.solution[agent.id] = path;
         root.cost += path.size();
     }
@@ -20,6 +27,10 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
     open_list.push(root);
 
     while (!open_list.empty()) {
+        if (is_timeout()) {
+            return {};  // timeout return empty result
+        }
+        
         CBSNode current = open_list.top();
         open_list.pop();
 
@@ -31,6 +42,22 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
             for (const auto& agent : agents) {
                 result.push_back(current.solution[agent.id]);
             }
+            
+            // 添加日志信息
+            std::stringstream ss;
+            ss << "Found solution with paths:" << std::endl;
+            for (size_t i = 0; i < agents.size(); ++i) {
+                ss << "Agent " << agents[i].id << ": ";
+                const auto& path = result[i];
+                ss << "(" << path[0].x << "," << path[0].y << ")";
+                for (size_t j = 1; j < path.size(); ++j) {
+                    ss << " -> (" << path[j].x << "," << path[j].y << ")";
+                }
+                ss << " [length: " << path.size() << "]" << std::endl;
+            }
+            ss << "Total cost: " << current.cost;
+            utils::log_info(ss.str());
+            
             return result;
         }
 
@@ -76,47 +103,13 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
 std::vector<Conflict> CBS::detect_conflicts(const CBSNode& node) {
     std::vector<Conflict> conflicts;
     
-    // Check conflicts between all agent pairs
+    // 检查所有智能体对之间的冲突
     for (const auto& [agent1, path1] : node.solution) {
         for (const auto& [agent2, path2] : node.solution) {
             if (agent1 >= agent2) continue;
             
-            size_t max_length = std::max(path1.size(), path2.size());
-            
-            // Check each time step
-            for (size_t t = 0; t < max_length; ++t) {
-                // Get current position (if path ends, use goal)
-                Vertex pos1 = t < path1.size() ? path1[t] : path1.back();
-                Vertex pos2 = t < path2.size() ? path2[t] : path2.back();
-
-                // Check vertex conflict (Vertex conflict)
-                if (pos1 == pos2) {
-                    conflicts.emplace_back(agent1, agent2, pos1, t);
-                    continue;
-                }
-
-                // Check following and swapping conflicts
-                if (t < max_length - 1) {
-                    Vertex next_pos1 = (t + 1) < path1.size() ? path1[t + 1] : path1.back();
-                    Vertex next_pos2 = (t + 1) < path2.size() ? path2[t + 1] : path2.back();
-                    
-                    // Check swapping conflict (Swapping conflict) or following conflict (Following conflict)
-                    if (pos1 == next_pos2 && pos2 == next_pos1) { // Swapping conflict
-                        // For swapping conflict, choose either swapping position as conflict position
-                        conflicts.emplace_back(agent1, agent2, pos1, t);
-                        conflicts.emplace_back(agent1, agent2, pos2, t);
-                        continue;
-                    }
-                    if (next_pos1 == pos2) { // agent1 follows agent2
-                        conflicts.emplace_back(agent1, agent2, pos2, t);
-                        continue;
-                    }
-                    if (next_pos2 == pos1) { // agent2 follows agent1
-                        conflicts.emplace_back(agent1, agent2, pos1, t);
-                        continue;
-                    }
-                }
-            }
+            auto path_conflicts = utils::detect_path_conflicts(agent1, agent2, path1, path2);
+            conflicts.insert(conflicts.end(), path_conflicts.begin(), path_conflicts.end());
         }
     }
     
@@ -149,4 +142,11 @@ bool CBS::find_bypass(CBSNode& node, const Agent& agent, const Vertex& conflict_
     }
 
     return false;
+}
+
+bool CBS::is_timeout() const {
+    auto current_time = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>
+                   (current_time - start_time);
+    return duration.count() / 1000.0 > time_limit;
 }

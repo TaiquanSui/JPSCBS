@@ -3,8 +3,10 @@
 
 #include "../Vertex.h"
 #include "../Agent.h"
+#include "../utilities/Log.h"
 #include <vector>
 #include <unordered_map>
+#include <chrono>
 
 struct Conflict {
     int agent1;
@@ -37,9 +39,12 @@ public:
     explicit CBS(bool use_bypass = true) : use_bypass(use_bypass) {}
     std::vector<std::vector<Vertex>> solve(const std::vector<Agent>& agents, 
                                          const std::vector<std::vector<int>>& grid);
+    void set_time_limit(double seconds) { time_limit = seconds; }
 
 private:
     bool use_bypass;
+    double time_limit = 30.0;
+    std::chrono::steady_clock::time_point start_time;
     
     std::vector<Conflict> detect_conflicts(const CBSNode& node);
     std::vector<Vertex> find_path(const Agent& agent,
@@ -47,6 +52,8 @@ private:
                                 const std::vector<Constraint>& constraints);
     bool find_bypass(CBSNode& node, const Agent& agent, const Vertex& conflict_vertex, 
                     int conflict_time, const std::vector<std::vector<int>>& grid);
+    
+    bool is_timeout() const;
 };
 
 #endif // CBS_H

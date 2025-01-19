@@ -9,15 +9,6 @@
 #include <memory>
 #include <queue>
 
-struct JPSState {
-    std::priority_queue<std::shared_ptr<AStarNode>, 
-                       std::vector<std::shared_ptr<AStarNode>>, 
-                       AStarNodeComparator> open_list;
-    bool is_complete = false;
-
-    JPSState() = default;
-};
-
 struct Interval {
     std::vector<Vertex> jump_points;  // Store all jump points in the interval in order
 
@@ -49,7 +40,11 @@ struct JPSPathComparator {
     }
 };
 
-JPSPath jump_point_search(const Vertex& start, const Vertex& goal, const std::vector<std::vector<int>>& grid, JPSState& state);
-
+JPSPath jump_point_search(const Vertex& start, 
+                         const Vertex& goal, 
+                         const std::vector<std::vector<int>>& grid,
+                         std::priority_queue<std::shared_ptr<AStarNode>, 
+                                          std::vector<std::shared_ptr<AStarNode>>, 
+                                          AStarNodeComparator>& open_list);
 
 #endif // JPS_H 
