@@ -4,7 +4,6 @@
 #include "../Vertex.h"
 #include "../action/Action.h"
 #include "../Heuristic.h"
-#include "../utilities/Utility.h"
 #include "../cbs/CBS.h"
 #include <vector>
 #include <queue>
@@ -30,6 +29,23 @@ struct AStarNode {
 struct AStarNodeComparator {
     bool operator()(const std::shared_ptr<AStarNode>& a, const std::shared_ptr<AStarNode>& b) const {
         return a->f() > b->f();
+    }
+};
+
+struct StateKey {
+    Vertex pos;
+    int time;
+    
+    bool operator==(const StateKey& other) const {
+        return pos == other.pos && time == other.time;
+    }
+};
+
+struct StateKeyHash {
+    std::size_t operator()(const StateKey& key) const {
+        return std::hash<int>()(key.pos.x) ^ 
+               std::hash<int>()(key.pos.y) ^ 
+               std::hash<int>()(key.time);
     }
 };
 

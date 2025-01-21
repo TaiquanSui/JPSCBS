@@ -3,7 +3,6 @@
 
 #include "../Vertex.h"
 #include "../Agent.h"
-#include "../utilities/Log.h"
 #include <vector>
 #include <unordered_map>
 #include <chrono>
@@ -29,9 +28,9 @@ struct Constraint {
 struct CBSNode {
     std::unordered_map<int, std::vector<Vertex>> solution;
     std::vector<Constraint> constraints;
-    int cost;
+    double cost;
 
-    CBSNode() : cost(0) {}
+    CBSNode() : cost(0.0) {}
 };
 
 class CBS {
@@ -46,7 +45,7 @@ private:
     double time_limit = 30.0;
     std::chrono::steady_clock::time_point start_time;
     
-    std::vector<Conflict> detect_conflicts(const CBSNode& node);
+    std::vector<Constraint> generate_constraints(const CBSNode& node);
     std::vector<Vertex> find_path(const Agent& agent,
                                 const std::vector<std::vector<int>>& grid,
                                 const std::vector<Constraint>& constraints);
@@ -54,6 +53,10 @@ private:
                     int conflict_time, const std::vector<std::vector<int>>& grid);
     
     bool is_timeout() const;
+    void print_node_info(const CBSNode& node, const std::string& prefix = "");
+
+    // 计算单条路径的代价
+    double calculate_sic(const std::vector<Vertex>& path);
 };
 
 #endif // CBS_H

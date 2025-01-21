@@ -40,11 +40,23 @@ struct JPSPathComparator {
     }
 };
 
+struct JPSState {
+    std::priority_queue<std::shared_ptr<AStarNode>, 
+                       std::vector<std::shared_ptr<AStarNode>>, 
+                       AStarNodeComparator> open_list;
+    std::vector<std::shared_ptr<AStarNode>> closed_list;
+    
+    void clear() {
+        while (!open_list.empty()) {
+            open_list.pop();
+        }
+        closed_list.clear();
+    }
+};
+
 JPSPath jump_point_search(const Vertex& start, 
                          const Vertex& goal, 
                          const std::vector<std::vector<int>>& grid,
-                         std::priority_queue<std::shared_ptr<AStarNode>, 
-                                          std::vector<std::shared_ptr<AStarNode>>, 
-                                          AStarNodeComparator>& open_list);
+                         JPSState& state);
 
 #endif // JPS_H 

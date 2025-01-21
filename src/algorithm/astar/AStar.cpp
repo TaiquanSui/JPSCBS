@@ -1,4 +1,6 @@
 #include "AStar.h"
+#include "../utilities/Log.h"
+#include "../utilities/Utility.h"
 #include <memory>
 
 namespace {
@@ -28,8 +30,15 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
         auto current = open_list.top();
         open_list.pop();
 
+        logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," + 
+                       std::to_string(current->pos.y) + "), g值: " + 
+                       std::to_string(current->g) + ", h值: " + 
+                       std::to_string(current->h));
+
         if (current->pos == goal) {
-            return reconstruct_path(current);
+            auto path = reconstruct_path(current);
+            logger::log_info("找到路径: " + logger::vectorToString(path));
+            return path;
         }
 
         for (const auto& move : Action::MOVEMENTS_9) {
@@ -39,7 +48,12 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
                 continue;
             }
 
-            double tentative_g = current->g + utils::getMoveCost(current->pos, neighbor);
+            double tentative_g;
+            if (utils::isDiagonal(neighbor - current->pos)) {
+                tentative_g = current->g + std::sqrt(2.0);
+            } else {
+                tentative_g = current->g + 1.0;
+            }
 
             if (closed_list.count(neighbor) && closed_list[neighbor] <= tentative_g) {
                 continue;
@@ -49,10 +63,17 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
 
             auto neighbor_node = std::make_shared<AStarNode>(
                 neighbor, tentative_g, heuristic(neighbor, goal), current);
+            
+            logger::log_info("生成后继节点: (" + std::to_string(neighbor.x) + "," + 
+                           std::to_string(neighbor.y) + "), g值: " + 
+                           std::to_string(tentative_g) + 
+                           ", h值: " + std::to_string(heuristic(neighbor, goal)));
+            
             open_list.push(neighbor_node);
         }
     }
 
+    logger::log_info("未找到路径");
     return {};
 }
 
@@ -62,10 +83,14 @@ std::vector<Vertex> a_star(int agent_id,
                           const std::vector<std::vector<int>>& grid,
                           const std::vector<Constraint>& constraints,
                           int start_time) {
+    const int MAX_TIME = 100000;  // 设置一个合理的最大时间限制
+    
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 
                        AStarNodeComparator> open_list;
-    std::unordered_map<Vertex, double, VertexHash> closed_list;
+    
+    // 修改closed_list的键类型，加入时间维度
+    std::unordered_map<StateKey, double, StateKeyHash> closed_list;
 
     auto start_node = std::make_shared<AStarNode>(
         start, 0, heuristic(start, goal), nullptr, start_time);
@@ -75,34 +100,69 @@ std::vector<Vertex> a_star(int agent_id,
         auto current = open_list.top();
         open_list.pop();
 
+        logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," + 
+                       std::to_string(current->pos.y) + "), g值: " + 
+                       std::to_string(current->g) + ", h值: " + 
+                       std::to_string(current->h) + ", 时间: " + 
+                       std::to_string(current->time));
+        // 如果超过最大时间限制，认为无解
+        if (current->time >= MAX_TIME) {
+            logger::log_info("智能体 " + std::to_string(agent_id) + 
+                           " 搜索超过最大时间限制，认为无解");
+            return {};
+        }
+
         if (current->pos == goal) {
-            return reconstruct_path(current);
+            auto path = reconstruct_path(current);
+            logger::log_info("智能体 " + std::to_string(agent_id) + " 找到路径: " + 
+                           logger::vectorToString(path));
+            return path;
         }
 
         for (const auto& move : Action::MOVEMENTS_9) {
             Vertex next_pos(current->pos.x + move.x, current->pos.y + move.y);
             int next_time = current->time + 1;
 
+            // 检查是否超过时间限制
+            if (next_time >= MAX_TIME) {
+                continue;
+            }
+
             if (!utils::isWalkable(grid, next_pos)) {
                 continue;
             }
 
-            if (!utils::validate_constraints(constraints, agent_id, next_pos, next_time)) {
+            if (!utils::is_valid_move(constraints, agent_id, next_pos, next_time)) {
                 continue;
             }
 
-            double tentative_g = current->g + utils::getMoveCost(current->pos, next_pos);
+            double tentative_g;
+            if (utils::isDiagonal(next_pos - current->pos)) {
+                tentative_g = current->g + std::sqrt(2.0);
+            } else {
+                tentative_g = current->g + 1.0;
+            }
+            StateKey state_key{next_pos, next_time};
 
-            if (closed_list.count(next_pos) && closed_list[next_pos] <= tentative_g) {
+            if (closed_list.count(state_key) && closed_list[state_key] <= tentative_g) {
                 continue;
             }
-            closed_list[next_pos] = tentative_g;
+            
+            closed_list[state_key] = tentative_g;
             
             auto next_node = std::make_shared<AStarNode>(
                 next_pos, tentative_g, heuristic(next_pos, goal), current, next_time);
+
+            logger::log_info("生成后继节点: (" + std::to_string(next_pos.x) + "," + 
+                           std::to_string(next_pos.y) + "), g值: " + 
+                           std::to_string(tentative_g) + 
+                           ", h值: " + std::to_string(heuristic(next_pos, goal)) + 
+                           ", 时间: " + std::to_string(next_time));
+            
             open_list.push(next_node);
         }
     }
 
+    logger::log_info("智能体 " + std::to_string(agent_id) + " 未找到路径");
     return {};
 }

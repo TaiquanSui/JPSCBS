@@ -16,7 +16,18 @@ protected:
     }
 };
 
-TEST_F(AStarTest, SimplePathFinding) {
+TEST_F(AStarTest, SimplePathFinding_BasicAStar) {
+    Vertex start{0, 0};
+    Vertex goal{3, 3};
+    
+    auto path = a_star(start, goal, grid);
+    ASSERT_FALSE(path.empty());
+    ASSERT_EQ(path.front(), start);
+    ASSERT_EQ(path.back(), goal);
+    ASSERT_TRUE(utils::validatePath(path, start, goal, grid));
+}
+
+TEST_F(AStarTest, SimplePathFinding_ConstrainedAStar) {
     Vertex start{0, 0};
     Vertex goal{3, 3};
     
@@ -24,6 +35,7 @@ TEST_F(AStarTest, SimplePathFinding) {
     ASSERT_FALSE(path.empty());
     ASSERT_EQ(path.front(), start);
     ASSERT_EQ(path.back(), goal);
+    ASSERT_TRUE(utils::validatePath(path, start, goal, grid));
 }
 
 TEST_F(AStarTest, NoPath) {
@@ -36,7 +48,7 @@ TEST_F(AStarTest, NoPath) {
     Vertex start{0, 0};
     Vertex goal{3, 3};
     
-    auto path = a_star(0,start, goal, grid,{});
+    auto path = a_star(start, goal, grid);
     ASSERT_TRUE(path.empty());
 }
 
@@ -45,7 +57,11 @@ TEST_F(AStarTest, PathWithConstraints) {
     Vertex goal{3, 3};
     std::vector<Constraint> constraints = {
         {0, Vertex{1, 0}, 1},
-        {0, Vertex{0, 1}, 1}
+        {0, Vertex{0, 1}, 1},
+        {0, Vertex{1, 0}, 2},
+        {0, Vertex{0, 1}, 2},
+        {0, Vertex{1, 0}, 3},
+        {0, Vertex{0, 1}, 3}
     };
     
     auto path = a_star(0, start, goal, grid, constraints);

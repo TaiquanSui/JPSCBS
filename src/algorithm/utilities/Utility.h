@@ -7,6 +7,7 @@
 #include <cmath>
 #include <chrono>
 
+
 namespace utils {
     inline bool isWalkable(const std::vector<std::vector<int>>& grid, const Vertex& pos) {
         return pos.x >= 0 && pos.x < grid.size() && 
@@ -20,8 +21,8 @@ namespace utils {
                grid[x][y] == 0;
     }
 
-    inline int manhattanDistance(const Vertex& a, const Vertex& b) {
-        return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+    inline int chebyshevDistance(const Vertex& a, const Vertex& b) {
+        return std::max(std::abs(a.x - b.x), std::abs(a.y - b.y));
     }
 
     inline double euclideanDistance(const Vertex& a, const Vertex& b) {
@@ -37,7 +38,7 @@ namespace utils {
     inline double getMoveCost(const Vertex& from, const Vertex& to) {
         int dx = std::abs(to.x - from.x);
         int dy = std::abs(to.y - from.y);
-        return (dx && dy && dx == dy) ? dx * std::sqrt(2.0) : dx;  // Diagonal move cost is sqrt(2), straight move cost is 1
+        return (dx && dy && dx == dy) ? dx * std::sqrt(2.0) : (dx + dy);
     }
 
     inline bool isDiagonal(const Vertex& from, const Vertex& to) {
@@ -88,16 +89,16 @@ namespace utils {
         return true;
     }
 
-    inline bool validate_constraints(const std::vector<Constraint>& constraints, 
-                                   int agent_id, const Vertex& pos, int time) {
+    inline bool is_valid_move(const std::vector<Constraint>& constraints, 
+                      int agent_id, const Vertex& pos, int time) {
         for (const auto& constraint : constraints) {
             if (constraint.agent == agent_id && 
                 constraint.vertex == pos && 
                 constraint.time == time) {
-                return false;  // violate constraint
+                return false;
             }
         }
-        return true;  // satisfy all constraints
+        return true;
     }
 
     inline double getElapsedTime(const std::chrono::steady_clock::time_point& start_time) {
@@ -107,13 +108,13 @@ namespace utils {
         return duration.count() / 1000.0;
     }
 
-    // detect path conflicts between two agents
-    inline std::vector<Conflict> detect_path_conflicts(
+    // detect path conflicts and return constraints for both agents
+    inline std::vector<Constraint> generate_constraints_from_conflict(
         int agent1_id, int agent2_id,
         const std::vector<Vertex>& path1,
         const std::vector<Vertex>& path2
     ) {
-        std::vector<Conflict> conflicts;
+        std::vector<Constraint> constraints;  // 存储所有约束
         size_t max_length = std::max(path1.size(), path2.size());
         
         // check each time step
@@ -124,7 +125,8 @@ namespace utils {
 
             // check vertex conflict
             if (pos1 == pos2) {
-                conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
+                constraints.emplace_back(agent1_id, pos1, t);
+                constraints.emplace_back(agent2_id, pos2, t);
                 continue;
             }
 
@@ -135,24 +137,27 @@ namespace utils {
                 
                 // check swapping conflict
                 if (pos1 == next_pos2 && pos2 == next_pos1) {
-                    conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
-                    conflicts.emplace_back(agent1_id, agent2_id, pos2, t);
+                    constraints.emplace_back(agent1_id, pos1, t);
+                    constraints.emplace_back(agent2_id, pos2, t);
                     continue;
                 }
                 
                 // check following conflict
                 if (next_pos1 == pos2) { // agent1 follows agent2
-                    conflicts.emplace_back(agent1_id, agent2_id, pos2, t);
+                    constraints.emplace_back(agent1_id, pos2, t+1);
+                    constraints.emplace_back(agent2_id, pos2, t);
                     continue;
                 }
                 if (next_pos2 == pos1) { // agent2 follows agent1
-                    conflicts.emplace_back(agent1_id, agent2_id, pos1, t);
+                    constraints.emplace_back(agent1_id, pos1, t+1);
+                    constraints.emplace_back(agent2_id, pos1, t);
                     continue;
                 }
             }
         }
-        return conflicts;
+        return constraints;
     }
+
 }
 
 #endif // UTILITY_H 

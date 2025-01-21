@@ -3,8 +3,11 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
+#include "../Vertex.h"
+#include <sstream>
 
-namespace utils {
+namespace logger {
     // Log level enum
     enum class LogLevel {
         INFO,
@@ -38,6 +41,32 @@ namespace utils {
 
     inline void log_error(const std::string& message) {
         log(LogLevel::ERROR, message);
+    }
+
+    // Convert vector to string representation
+    template<typename T>
+    inline std::string vectorToString(const std::vector<T>& vec) {
+        std::stringstream ss;
+        ss << "[";
+        for (size_t i = 0; i < vec.size(); ++i) {
+            ss << vec[i];
+            if (i < vec.size() - 1) ss << ", ";
+        }
+        ss << "]";
+        return ss.str();
+    }
+
+    // Specialization for Vertex
+    template<>
+    inline std::string vectorToString(const std::vector<Vertex>& vec) {
+        std::stringstream ss;
+        ss << "[";
+        for (size_t i = 0; i < vec.size(); ++i) {
+            ss << "(" << vec[i].x << "," << vec[i].y << ")";
+            if (i < vec.size() - 1) ss << ", ";
+        }
+        ss << "]";
+        return ss.str();
     }
 }
 

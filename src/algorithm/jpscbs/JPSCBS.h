@@ -18,9 +18,9 @@ struct JPSCBSNode {
     // Multiple paths for each agent (sorted by cost)
     std::unordered_map<int, std::priority_queue<JPSPath, std::vector<JPSPath>, JPSPathComparator>> solution;
     std::vector<Constraint> constraints;
-    int cost;
+    double cost;
 
-    JPSCBSNode() : cost(0) {}
+    JPSCBSNode() : cost(0.0) {}
 };
 
 struct JPSCBSNodeComparator {
@@ -41,9 +41,7 @@ public:
 private:
     // Store all paths found for each agent
     std::unordered_map<int, std::vector<JPSPath>> solutions;
-    std::unordered_map<int, std::priority_queue<std::shared_ptr<AStarNode>, 
-                                               std::vector<std::shared_ptr<AStarNode>>, 
-                                               AStarNodeComparator>> agent_states;
+    std::unordered_map<int, JPSState> agent_states;
     std::vector<std::vector<int>> grid;
     
     // Timeout related
@@ -53,12 +51,12 @@ private:
     // Core functions
     JPSPath search_by_jps(const Agent& agent);
     void update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node);
-    std::vector<Conflict> detect_conflicts(const JPSCBSNode& node);
+    std::vector<Constraint> generate_constraints(const JPSCBSNode& node);
     bool find_alt_symmetric_paths(JPSCBSNode& node, 
-                                const Conflict& conflict);
+                                const std::vector<Constraint>& constraints);
     
     void resolve_conflict_locally(JPSCBSNode& node, const Constraint& constraint);
-    int calculate_sic(const std::unordered_map<int, std::priority_queue<JPSPath, 
+    double calculate_sic(const std::unordered_map<int, std::priority_queue<JPSPath, 
                      std::vector<JPSPath>, JPSPathComparator>>& solution);
     void update_path_with_local_solution(JPSCBSNode& node, 
                                            int agent_id,
@@ -84,6 +82,8 @@ private:
                        (current_time - start_time);
         return duration.count() / 1000.0 > time_limit;
     }
+
+    void print_node_info(const std::shared_ptr<JPSCBSNode>& node, const std::string& prefix);
 };
 
 #endif // JPSCBS_H
