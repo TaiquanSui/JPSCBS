@@ -164,6 +164,65 @@ namespace utils {
         return constraints;
     }
 
+    inline int count_conflicts(
+        int agent1_id, int agent2_id,
+        const std::vector<Vertex>& path1,
+        const std::vector<Vertex>& path2
+    ) {
+        int conflict_count = 0;
+        
+        size_t max_length = std::max(path1.size(), path2.size());
+        
+        // check each time step
+        for (size_t t = 0; t < max_length; ++t) {
+            // get current position (if path ends, use goal)
+            Vertex pos1 = t < path1.size() ? path1[t] : path1.back();
+            Vertex pos2 = t < path2.size() ? path2[t] : path2.back();
+
+            // check vertex conflict
+            if (pos1 == pos2) {
+                conflict_count++;
+                continue;
+            }
+
+            // check following and swapping conflicts
+            if (t < max_length - 1) {
+                Vertex next_pos1 = (t + 1) < path1.size() ? path1[t + 1] : path1.back();
+                Vertex next_pos2 = (t + 1) < path2.size() ? path2[t + 1] : path2.back();
+                
+                // check swapping conflict
+                if (pos1 == next_pos2 && pos2 == next_pos1) {
+                    conflict_count++;
+                    continue;
+                }
+                
+                // check following conflict
+                if (next_pos1 == pos2) { // agent1 follows agent2
+                    conflict_count++;
+                    continue;
+                }
+                if (next_pos2 == pos1) { // agent2 follows agent1
+                    conflict_count++;
+                    continue;
+                }
+            }
+        }
+    
+        return conflict_count;
+    }
+
+    inline double calculate_path_cost(const std::vector<Vertex>& path) {
+        double cost = 0;
+        for (size_t i = 0; i < path.size() - 1; ++i) {
+            if (utils::isDiagonal(path[i+1] - path[i])) {
+                cost += std::sqrt(2.0);
+            } else {
+                cost += 1.0;
+            }
+        }
+        return cost;
+    }   
+
 }
 
 #endif // UTILITY_H 

@@ -27,14 +27,14 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         root->solution[agent.id] = std::move(paths);  // 移动优先队列的所有权到root节点
     }
 
-    root->cost = calculate_sic(root->solution);
+    root->cost = calculate_sic(*root);
     
     std::priority_queue<std::shared_ptr<JPSCBSNode>, 
                        std::vector<std::shared_ptr<JPSCBSNode>>, 
                        JPSCBSNodeComparator> open_list;
     open_list.push(root);
     
-    print_node_info(root, "初始节点");
+    print_node_info(*root, "初始节点");
     
     while (!open_list.empty()) {
         // Check timeout
@@ -46,24 +46,8 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         auto current = open_list.top();
         open_list.pop();
         
-        print_node_info(current, "当前节点");
-
-        std::stringstream ss;
-        ss << "当前节点约束: [";
-        for (size_t i = 0; i < current->constraints.size(); ++i) {
-            const auto& constraint = current->constraints[i];
-            ss << "智能体" << constraint.agent 
-               << "在时间" << constraint.time 
-               << "不能到达位置(" << constraint.vertex.x 
-               << "," << constraint.vertex.y << ")";
-
-            if (i < current->constraints.size() - 1) {
-                ss << ", ";
-            }
-        }
-        ss << "]";
-    
-        logger::log_info(ss.str());
+        print_node_info(*current, "当前节点");
+        logger::print_constraints(current->constraints, "当前节点约束");
         
         // Update current node's solution
         update_solutions(agents, *current);
@@ -80,24 +64,20 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         }
 
         if(find_alt_symmetric_paths(*current, new_constraints)) {
+            open_list.push(current);
             continue;
         }   
         
         // 为每个约束创建新的节点
         for (const auto& constraint : new_constraints) {
-            std::string constraint_info = "处理约束: ";
-            constraint_info += "智能体 " + std::to_string(constraint.agent);
-            constraint_info += " 在位置 (" + std::to_string(constraint.vertex.x) + 
-                             "," + std::to_string(constraint.vertex.y) + ")";
-            constraint_info += " 时间 " + std::to_string(constraint.time);
-            logger::log_info(constraint_info);
+            logger::print_constraint(constraint, "处理约束");
 
             auto new_node = std::make_shared<JPSCBSNode>(*current);
             new_node->constraints.push_back(constraint);
             resolve_conflict_locally(*new_node, constraint);
-            new_node->cost = calculate_sic(new_node->solution);
+            new_node->cost = calculate_sic(*new_node);
             open_list.push(new_node);
-            print_node_info(new_node, "新生成的子节点");
+            print_node_info(*new_node, "新生成的子节点");
         }
     }
     
@@ -114,20 +94,13 @@ JPSPath JPSCBS::search_by_jps(const Agent& agent) {
     return jump_point_search(agent.start, agent.goal, grid, agent_states[agent.id]);
 }
 
-double JPSCBS::calculate_sic(const std::unordered_map<int, std::priority_queue<JPSPath, 
-                            std::vector<JPSPath>, JPSPathComparator>>& solution) {
+double JPSCBS::calculate_sic(const JPSCBSNode& node) {
     double total_cost = 0.0;
-    for (const auto& [_, paths] : solution) {
+    for (const auto& [_, paths] : node.solution) {
         if (!paths.empty()) {
             const auto& path = paths.top().path;
             // 计算单条路径的代价
-            for (size_t i = 0; i < path.size() - 1; ++i) {
-                if (utils::isDiagonal(path[i+1] - path[i])) {
-                    total_cost += std::sqrt(2.0);
-                } else {
-                    total_cost += 1.0;
-                }
-            }
+            total_cost += utils::calculate_path_cost(path);
         }
     }
     return total_cost;
@@ -193,70 +166,93 @@ std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
 }
 
 bool JPSCBS::find_alt_symmetric_paths(JPSCBSNode& node, const std::vector<Constraint>& constraints) {
+    // 记录原始节点的冲突数量
+    int original_conflicts = count_conflicts(node);
+    logger::log_info("原始节点的冲突数量: " + std::to_string(original_conflicts));
+
     for(const auto& constraint : constraints) {
-        const auto& path = node.solution[constraint.agent].top();  // 这里获取JPSPath
-        if (find_local_bypass(path, constraint.agent, node, constraint.vertex)) {   
-            return true;
+        // 创建 current_path 的拷贝而不是引用
+        JPSPath current_path = node.solution[constraint.agent].top();
+        
+        for (const auto& interval : current_path.possible_intervals) {
+            // Ensure interval contains at least two points
+            if (interval.jump_points.size() < 2) continue;
+            
+            // Find start and end positions of interval in path
+            auto start_it = std::find(current_path.path.begin(), current_path.path.end(), interval.get_start());
+            auto end_it = std::find(start_it, current_path.path.end(), interval.get_end());
+            
+            // Validate iterators
+            if (start_it == current_path.path.end() || end_it == current_path.path.end() || start_it >= end_it) {
+                continue;
+            }
+            
+            // Check if constraint_vertex is in this path segment
+            auto constraint_it = std::find(start_it, end_it + 1, constraint.vertex);
+            if (constraint_it == end_it + 1) continue;
+
+            // Calculate start time in path
+            int start_time = std::distance(current_path.path.begin(), start_it);
+
+            // Add temporary constraint
+            std::vector<Constraint> temp_constraints = node.constraints;
+            temp_constraints.emplace_back(constraint.agent, constraint.vertex, constraint.time);
+
+            logger::log_info("尝试找到local bypass");
+            logger::log_info("agent_id: " + std::to_string(constraint.agent));
+            logger::log_info("interval: " + logger::vectorToString(interval.jump_points));
+            logger::log_info("start_time: " + std::to_string(start_time));
+            logger::print_constraints(temp_constraints,"temp constrains");
+
+            // Try to find an alternative path
+            auto alt_path = a_star(constraint.agent, interval.get_start(), interval.get_end(), 
+                                 grid, temp_constraints, start_time);
+
+            if (!alt_path.empty()) {
+                // 计算原始路径中被替换部分的代价
+                logger::log_info("找到绕行路径: " + logger::vectorToString(alt_path));
+                std::vector<Vertex> original_segment(start_it, end_it + 1);
+                double original_cost = utils::calculate_path_cost(original_segment);
+                double alt_cost = utils::calculate_path_cost(alt_path);
+
+                if (std::abs(alt_cost - original_cost) < 1e-6) {
+
+                    auto& agent_paths = node.solution[constraint.agent];
+                    agent_paths.pop();
+
+                    std::vector<Vertex> new_path;
+                    new_path.insert(new_path.end(), current_path.path.begin(), start_it);
+                    new_path.insert(new_path.end(), alt_path.begin(), alt_path.end());
+                    new_path.insert(new_path.end(), end_it + 1, current_path.path.end());
+
+                    JPSPath updated_path = current_path;  // 使用之前保存的拷贝
+                    updated_path.path = std::move(new_path);
+                    agent_paths.push(std::move(updated_path));
+
+                    // 计算新路径的冲突数量
+                    int new_conflicts = count_conflicts(node);
+                    logger::log_info("新路径的冲突数量: " + std::to_string(new_conflicts));
+
+                    // 只有当冲突数量减少时才接受新路径
+                    if (new_conflicts < original_conflicts) {
+                        // 重新计算节点的代价
+                        node.cost = calculate_sic(node);
+                        print_node_info(node, "找到更好的对称绕行路径");
+                        return true;
+                    } else {
+                        // 如果冲突没有减少，恢复原来的路径
+                        agent_paths.pop();
+                        agent_paths.push(std::move(current_path));  // 使用移动语义
+                        logger::log_info("对称绕行路径未能减少冲突数量，放弃此路径");
+                    }
+                }else{
+                    logger::log_info("绕行路径距离更远");
+                }
+            }
         }
     }
     return false;
 }
-
-
-bool JPSCBS::find_local_bypass(const JPSPath& path, int agent_id, 
-                                  JPSCBSNode& node, const Vertex& conflict_vertex) {
-    for (const auto& interval : path.possible_intervals) {
-        // Ensure interval contains at least two points
-        if (interval.jump_points.size() < 2) continue;
-        
-        // Find start and end positions of interval in path
-        auto start_it = std::find(path.path.begin(), path.path.end(), interval.get_start());
-        auto end_it = std::find(start_it, path.path.end(), interval.get_end());
-        
-        // Validate iterators
-        if (start_it == path.path.end() || end_it == path.path.end() || start_it >= end_it) {
-            continue;
-        }
-        
-        // Calculate start time in path
-        int start_time = std::distance(path.path.begin(), start_it);
-        
-        // Check if conflict_vertex is in this path segment
-        auto conflict_it = std::find(start_it, end_it + 1, conflict_vertex);
-        if (conflict_it == end_it + 1) continue;
-        
-        // Add temporary constraint
-        std::vector<Constraint> temp_constraints = node.constraints;
-        temp_constraints.emplace_back(agent_id, conflict_vertex, start_time);
-        
-        logger::log_info("尝试找到local bypass");
-        logger::log_info("agent_id: " + std::to_string(agent_id));
-        logger::log_info("interval: " + logger::vectorToString(interval.jump_points));
-        logger::log_info("start_time: " + std::to_string(start_time));
-        logger::print_constraints(temp_constraints,"temp constrains");
-
-        // Try to find an alternative path
-        auto alt_path = a_star(agent_id, interval.get_start(), interval.get_end(), 
-                             grid, temp_constraints, start_time);
-        
-        if (!alt_path.empty()) {
-            auto& agent_paths = node.solution[agent_id];
-            agent_paths.pop();
-
-            std::vector<Vertex> new_path;
-            new_path.insert(new_path.end(), path.path.begin(), start_it);
-            new_path.insert(new_path.end(), alt_path.begin(), alt_path.end());
-            new_path.insert(new_path.end(), end_it + 1, path.path.end());
-
-            JPSPath updated_path = path;
-            updated_path.path = std::move(new_path);
-            agent_paths.push(std::move(updated_path));
-            return true;
-        }
-    }
-    return false;
-}
-
 
 void JPSCBS::resolve_conflict_locally(JPSCBSNode& node, const Constraint& constraint) {
     const auto& current_path = node.solution.at(constraint.agent).top();
@@ -443,13 +439,13 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
     agent_paths.push(std::move(updated_path));
 }
 
-void JPSCBS::print_node_info(const std::shared_ptr<JPSCBSNode>& node, const std::string& prefix) {
+void JPSCBS::print_node_info(const JPSCBSNode& node, const std::string& prefix) {
     if (!prefix.empty()) {
         logger::log_info(prefix + ":");
     }
-    logger::log_info("总代价: " + std::to_string(std::round(node->cost * 1000) / 1000.0));  // 保留3位小数
+    logger::log_info("总代价: " + std::to_string(std::round(node.cost * 1000) / 1000.0));  // 保留3位小数
     
-    for (const auto& [agent_id, paths] : node->solution) {
+    for (const auto& [agent_id, paths] : node.solution) {
         if (!paths.empty()) {
             std::string path_str = "智能体 " + std::to_string(agent_id) + " 的路径: ";
             for (const auto& pos : paths.top().path) {
@@ -459,4 +455,25 @@ void JPSCBS::print_node_info(const std::shared_ptr<JPSCBSNode>& node, const std:
         }
     }
     logger::log_info("------------------------");
+}
+
+int JPSCBS::count_conflicts(const JPSCBSNode& node) {
+    int total_conflicts = 0;
+    const auto& solution = node.solution;
+    
+    // 检查每对智能体之间的冲突
+    for (auto it1 = solution.begin(); it1 != solution.end(); ++it1) {
+        auto it2 = it1;
+        ++it2;
+        for (; it2 != solution.end(); ++it2) {
+            total_conflicts += utils::count_conflicts(
+                it1->first,  // agent1_id
+                it2->first,  // agent2_id
+                it1->second.top().path,  // path1
+                it2->second.top().path   // path2
+            );
+        }
+    }
+    
+    return total_conflicts;
 }

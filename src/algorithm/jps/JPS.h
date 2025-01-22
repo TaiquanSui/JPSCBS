@@ -36,7 +36,7 @@ struct JPSPath {
 
 struct JPSPathComparator {
     bool operator()(const JPSPath& a, const JPSPath& b) const {
-        return a.path.size() > b.path.size();
+        return utils::calculate_path_cost(a.path) > utils::calculate_path_cost(b.path);
     }
 };
 

@@ -49,14 +49,16 @@ private:
     std::vector<Vertex> find_path(const Agent& agent,
                                 const std::vector<std::vector<int>>& grid,
                                 const std::vector<Constraint>& constraints);
-    bool find_bypass(CBSNode& node, const Agent& agent, const Vertex& conflict_vertex, 
-                    int conflict_time, const std::vector<std::vector<int>>& grid);
+    bool find_bypass(CBSNode& node, const std::vector<Agent>& agents, 
+                     const std::vector<Constraint>& constraints,
+                     const std::vector<std::vector<int>>& grid);
     
     bool is_timeout() const;
     void print_node_info(const CBSNode& node, const std::string& prefix = "");
 
     // 计算单条路径的代价
-    double calculate_sic(const std::vector<Vertex>& path);
+    double calculate_sic(const CBSNode& node);
+    int count_conflicts(const CBSNode& node);
 };
 
 #endif // CBS_H

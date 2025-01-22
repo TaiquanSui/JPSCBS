@@ -23,7 +23,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
             return {};
         } // No solution
         root.solution[agent.id] = path;
-        root.cost += calculate_sic(path);
+        root.cost += utils::calculate_path_cost(path);
     }
 
     auto compare = [](const CBSNode& a, const CBSNode& b) { return a.cost > b.cost; };
@@ -51,40 +51,17 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
                 result.push_back(current.solution[agent.id]);
             }
             
-            // 添加日志信息
-            std::stringstream ss;
-            ss << "Found solution with paths:" << std::endl;
-            for (size_t i = 0; i < agents.size(); ++i) {
-                ss << "Agent " << agents[i].id << ": ";
-                const auto& path = result[i];
-                ss << "(" << path[0].x << "," << path[0].y << ")";
-                for (size_t j = 1; j < path.size(); ++j) {
-                    ss << " -> (" << path[j].x << "," << path[j].y << ")";
-                }
-                ss << " [length: " << std::to_string(std::round(calculate_sic(path) * 1000) / 1000.0) << "]" << std::endl;
-            }
-            ss << "Total cost: " << std::to_string(std::round(current.cost * 1000) / 1000.0);
-            logger::log_info(ss.str());
+            print_node_info(current, "找到解");
             
             return result;
         }
 
-        logger::log_info("产生constrain: 智能体 " + std::to_string(constraints.front().agent) +
-                       " 在位置 (" + std::to_string(constraints.front().vertex.x) + 
-                       "," + std::to_string(constraints.front().vertex.y) + 
-                       ") 时间 " + std::to_string(constraints.front().time));
-
         
-        // Try to find bypass solutions for both agents
+        // Try to find bypass solutions for all agents
         if (use_bypass) {
-            for (const auto& constraint : constraints) {
-                Agent affected_agent = *std::find_if(agents.begin(), agents.end(),
-                    [&](const Agent& a) { return a.id == constraint.agent; });
-                // 对冲突中涉及的每个智能体尝试绕行
-                if (find_bypass(current, affected_agent, constraint.vertex, constraint.time, grid)) {
-                    open_list.push(current);
-                    continue;
-                }
+            if (find_bypass(current, agents, constraints, grid)) {
+                open_list.push(current);
+                continue;
             }
         }
 
@@ -93,21 +70,17 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
             CBSNode child = current;
             child.constraints.push_back(constraint);
             
-            logger::log_info("为智能体 " + std::to_string(constraint.agent) + 
-                           " 添加约束: 不能在时间 " + std::to_string(constraint.time) + 
-                           " 到达位置 (" + std::to_string(constraint.vertex.x) + 
-                           "," + std::to_string(constraint.vertex.y) + ")");
+            logger::print_constraints(child.constraints, "添加约束");
             
             // 为受约束影响的智能体重新规划路径
             Agent affected_agent = *std::find_if(agents.begin(), agents.end(),
             [&](const Agent& a) { return a.id == constraint.agent; });
             
-            
             auto new_path = find_path(affected_agent, grid, child.constraints);
             
             if (!new_path.empty()) {
                 child.solution[constraint.agent] = new_path;
-                child.cost = calculate_sic(new_path);
+                child.cost = calculate_sic(child);
                 open_list.push(child);
                 print_node_info(child, "新生成的子节点");
             } else {
@@ -150,25 +123,60 @@ std::vector<Vertex> CBS::find_path(const Agent& agent,
 }
 
             
-bool CBS::find_bypass(CBSNode& node, const Agent& agent, const Vertex& constrain_vertex, 
-                     int constrain_time, const std::vector<std::vector<int>>& grid) {
-    auto original_path = node.solution[agent.id];
+bool CBS::find_bypass(CBSNode& node, const std::vector<Agent>& agents, 
+                     const std::vector<Constraint>& constraints,
+                     const std::vector<std::vector<int>>& grid) {
+    // 记录原始节点的冲突数量
+    int original_conflicts = count_conflicts(node);
+    logger::log_info("原始节点的冲突数量: " + std::to_string(original_conflicts));
     
-    // Create temporary constraint set
-    std::vector<Constraint> temp_constraints = node.constraints;
-    // Add constraint for conflict position
-    temp_constraints.emplace_back(agent.id, constrain_vertex, constrain_time);
-    
-    // Search using temporary constraint set
-    auto path = a_star(agent.id, agent.start, agent.goal, grid, temp_constraints);
+    // 对每个约束尝试绕行
+    for (const auto& constraint : constraints) {
+        // 找到受影响的智能体
+        Agent affected_agent = *std::find_if(agents.begin(), agents.end(),
+            [&](const Agent& a) { return a.id == constraint.agent; });
+            
+        auto original_path = node.solution[affected_agent.id];
+        
+        // Create temporary constraint set
+        std::vector<Constraint> temp_constraints = node.constraints;
+        // Add constraint for conflict position
+        temp_constraints.emplace_back(affected_agent.id, constraint.vertex, constraint.time);
+        
+        // Search using temporary constraint set
+        auto path = a_star(affected_agent.id, affected_agent.start, affected_agent.goal, 
+                          grid, temp_constraints);
+        logger::print_constraints(temp_constraints, "绕行路径约束");
+        
+        // 原有路径
+        logger::log_info("原有路径: " + logger::vectorToString(original_path) + 
+                        " 原有路径代价: " + std::to_string(utils::calculate_path_cost(original_path)));
+        // 绕行路径
+        logger::log_info("绕行路径: " + logger::vectorToString(path) + 
+                        " 绕行路径代价: " + std::to_string(utils::calculate_path_cost(path)));
 
-    // 只比较路径代价，不要求路径长度相同
-    if (!path.empty() && 
-        std::abs(calculate_sic(path) - calculate_sic(original_path)) < 1e-6) {
-        node.solution[agent.id] = path;
-        return true;
+        // 只比较路径代价，不要求路径长度相同
+        if (!path.empty() && 
+            std::abs(utils::calculate_path_cost(path) - utils::calculate_path_cost(original_path)) < 1e-6) {
+            // 创建临时节点来测试新路径
+            CBSNode temp_node = node;
+            temp_node.solution[affected_agent.id] = path;
+            
+            // 计算新路径的冲突数量
+            int new_conflicts = count_conflicts(temp_node);
+            logger::log_info("新路径的冲突数量: " + std::to_string(new_conflicts));
+            
+            // 只有当冲突数量减少时才接受新路径
+            if (new_conflicts < original_conflicts) {
+                node.solution[affected_agent.id] = path;
+                node.cost = calculate_sic(node);
+                print_node_info(node, "绕行节点(冲突减少)");
+                return true;
+            } else {
+                logger::log_info("绕行路径未能减少冲突数量，放弃此路径");
+            }
+        }
     }
-
     return false;
 }
 
@@ -196,14 +204,32 @@ void CBS::print_node_info(const CBSNode& node, const std::string& prefix) {
     logger::log_info("------------------------");
 }
 
-double CBS::calculate_sic(const std::vector<Vertex>& path) {
+double CBS::calculate_sic(const CBSNode& node) {
     double cost = 0.0;
-    for (size_t i = 0; i < path.size() - 1; ++i) {
-        if (utils::isDiagonal(path[i+1] - path[i])) {
-            cost += std::sqrt(2.0);
-        } else {
-            cost += 1.0;
-        }
+    for (const auto& [agent_id, path] : node.solution) {
+        cost += utils::calculate_path_cost(path);
     }
     return cost;
 }
+
+int CBS::count_conflicts(const CBSNode& node) {
+    int total_conflicts = 0;
+    const auto& solution = node.solution;
+    
+    // 检查每对智能体之间的冲突
+    for (auto it1 = solution.begin(); it1 != solution.end(); ++it1) {
+        auto it2 = it1;
+        ++it2;
+        for (; it2 != solution.end(); ++it2) {
+            total_conflicts += utils::count_conflicts(
+                it1->first,  // agent1_id
+                it2->first,  // agent2_id
+                it1->second, // path1
+                it2->second  // path2
+            );
+        }
+    }
+    
+    return total_conflicts;
+}
+

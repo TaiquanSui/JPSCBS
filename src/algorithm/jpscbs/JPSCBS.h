@@ -56,8 +56,7 @@ private:
                                 const std::vector<Constraint>& constraints);
     
     void resolve_conflict_locally(JPSCBSNode& node, const Constraint& constraint);
-    double calculate_sic(const std::unordered_map<int, std::priority_queue<JPSPath, 
-                     std::vector<JPSPath>, JPSPathComparator>>& solution);
+    double calculate_sic(const JPSCBSNode& node);
     void update_path_with_local_solution(JPSCBSNode& node, 
                                            int agent_id,
                                            const JPSPath& current_path,
@@ -73,8 +72,6 @@ private:
                                     std::vector<Vertex>::const_iterator start_it,
                                     std::vector<Vertex>::const_iterator end_it,
                                     int start_time);
-    bool find_local_bypass(const JPSPath& path, int agent_id, 
-                              JPSCBSNode& node, const Vertex& conflict_vertex);
     
     bool is_timeout() const {
         auto current_time = std::chrono::steady_clock::now();
@@ -82,8 +79,9 @@ private:
                        (current_time - start_time);
         return duration.count() / 1000.0 > time_limit;
     }
+    int count_conflicts(const JPSCBSNode& node);
 
-    void print_node_info(const std::shared_ptr<JPSCBSNode>& node, const std::string& prefix);
+    void print_node_info(const JPSCBSNode& node, const std::string& prefix);
 };
 
 #endif // JPSCBS_H
