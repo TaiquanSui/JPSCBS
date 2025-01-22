@@ -30,10 +30,10 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
         auto current = open_list.top();
         open_list.pop();
 
-        logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," + 
-                       std::to_string(current->pos.y) + "), g值: " + 
-                       std::to_string(current->g) + ", h值: " + 
-                       std::to_string(current->h));
+        // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," +
+        //                std::to_string(current->pos.y) + "), g值: " +
+        //                std::to_string(current->g) + ", h值: " +
+        //                std::to_string(current->h));
 
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
@@ -64,10 +64,10 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
             auto neighbor_node = std::make_shared<AStarNode>(
                 neighbor, tentative_g, heuristic(neighbor, goal), current);
             
-            logger::log_info("生成后继节点: (" + std::to_string(neighbor.x) + "," + 
-                           std::to_string(neighbor.y) + "), g值: " + 
-                           std::to_string(tentative_g) + 
-                           ", h值: " + std::to_string(heuristic(neighbor, goal)));
+            // logger::log_info("生成后继节点: (" + std::to_string(neighbor.x) + "," +
+            //                std::to_string(neighbor.y) + "), g值: " +
+            //                std::to_string(tentative_g) +
+            //                ", h值: " + std::to_string(heuristic(neighbor, goal)));
             
             open_list.push(neighbor_node);
         }
@@ -100,11 +100,11 @@ std::vector<Vertex> a_star(int agent_id,
         auto current = open_list.top();
         open_list.pop();
 
-        logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," + 
-                       std::to_string(current->pos.y) + "), g值: " + 
-                       std::to_string(current->g) + ", h值: " + 
-                       std::to_string(current->h) + ", 时间: " + 
-                       std::to_string(current->time));
+        // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," +
+        //                std::to_string(current->pos.y) + "), g值: " +
+        //                std::to_string(current->g) + ", h值: " +
+        //                std::to_string(current->h) + ", 时间: " +
+        //                std::to_string(current->time));
         // 如果超过最大时间限制，认为无解
         if (current->time >= MAX_TIME) {
             logger::log_info("智能体 " + std::to_string(agent_id) + 
@@ -153,11 +153,11 @@ std::vector<Vertex> a_star(int agent_id,
             auto next_node = std::make_shared<AStarNode>(
                 next_pos, tentative_g, heuristic(next_pos, goal), current, next_time);
 
-            logger::log_info("生成后继节点: (" + std::to_string(next_pos.x) + "," + 
-                           std::to_string(next_pos.y) + "), g值: " + 
-                           std::to_string(tentative_g) + 
-                           ", h值: " + std::to_string(heuristic(next_pos, goal)) + 
-                           ", 时间: " + std::to_string(next_time));
+            // logger::log_info("生成后继节点: (" + std::to_string(next_pos.x) + "," +
+            //                std::to_string(next_pos.y) + "), g值: " +
+            //                std::to_string(tentative_g) +
+            //                ", h值: " + std::to_string(heuristic(next_pos, goal)) +
+            //                ", 时间: " + std::to_string(next_time));
             
             open_list.push(next_node);
         }

@@ -6,7 +6,7 @@
 #include <cmath>
 
 inline double heuristic(const Vertex& a, const Vertex& b) {
-    return utils::chebyshevDistance(a, b);
+    return utils::octileDistance(a, b);
 }
 
 #endif // HEURISTIC_H

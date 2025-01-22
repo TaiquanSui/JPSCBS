@@ -130,18 +130,18 @@ namespace {
         // 2: if n is an obstacle or is outside the grid then
         // 3: return null
         if (!utils::isWalkable(grid, next.x, next.y)) {
-            logger::log_info(base_info.str() + " - Jump point rejected: (" + 
-                           std::to_string(next.x) + "," + std::to_string(next.y) + 
-                           ") - obstacle or outside grid");
+            // logger::log_info(base_info.str() + " - Jump point rejected: (" + 
+            //                std::to_string(next.x) + "," + std::to_string(next.y) + 
+            //                ") - obstacle or outside grid");
             return Vertex(-1, -1);
         }
     
         // 4: if n = g then
         // 5: return n
         if (next == goal) {
-            logger::log_info(base_info.str() + " - Jump point found: (" + 
-                           std::to_string(next.x) + "," + std::to_string(next.y) + 
-                           ") - goal reached");
+            // logger::log_info(base_info.str() + " - Jump point found: (" + 
+            //                std::to_string(next.x) + "," + std::to_string(next.y) + 
+            //                ") - goal reached");
             return next;
         }
     
@@ -149,9 +149,9 @@ namespace {
         // 7: return n
         if (dx != 0 && dy != 0) {  // Diagonal move
             if(check_diagonal_forced(grid, next.x, next.y, dx, dy) && !is_in_parent_chain(current, next)) {
-                logger::log_info(base_info.str() + " - Jump point found: (" + 
-                               std::to_string(next.x) + "," + std::to_string(next.y) + 
-                               ") - diagonal forced neighbor");
+                // logger::log_info(base_info.str() + " - Jump point found: (" + 
+                //                std::to_string(next.x) + "," + std::to_string(next.y) + 
+                //                ") - diagonal forced neighbor");
                 return next;
             }
             // 8: if d~ is diagonal then
@@ -161,17 +161,17 @@ namespace {
             if (jump(next.x, next.y, dx, 0, current, grid, goal).x != -1 ||
                 jump(next.x, next.y, 0, dy, current, grid, goal).x != -1) {
                 if (!is_in_parent_chain(current, next)) {
-                    logger::log_info(base_info.str() + " - Jump point found: (" + 
-                                   std::to_string(next.x) + "," + std::to_string(next.y) + 
-                                   ") - diagonal recursive check");
+                    // logger::log_info(base_info.str() + " - Jump point found: (" + 
+                    //                std::to_string(next.x) + "," + std::to_string(next.y) + 
+                    //                ") - diagonal recursive check");
                     return next;
                 }
             }
         } else {
             if(check_straight_forced(grid, next.x, next.y, dx, dy) && !is_in_parent_chain(current, next)) {
-                logger::log_info(base_info.str() + " - Jump point found: (" + 
-                               std::to_string(next.x) + "," + std::to_string(next.y) + 
-                               ") - straight forced neighbor");
+                // logger::log_info(base_info.str() + " - Jump point found: (" + 
+                //                std::to_string(next.x) + "," + std::to_string(next.y) + 
+                //                ") - straight forced neighbor");
                 return next;
             }
         }
@@ -188,7 +188,7 @@ namespace {
 
         // 2: neighbours(x) ← prune(x, neighbours(x))
         std::vector<Vertex> pruned_dirs = get_pruned_neighbors(current, grid);
-        logger::log_info("Pruned directions: " + logger::vectorToString(pruned_dirs));
+        // logger::log_info("Pruned directions: " + logger::vectorToString(pruned_dirs));
 
         // 3: for all n ∈ neighbours(x) do
         for (const auto& dir : pruned_dirs) {
@@ -246,7 +246,7 @@ namespace {
             // 预计算路径长度并预分配内存
             size_t path_length = 1;  // 起点
             for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
-                path_length += utils::chebyshevDistance(all_jump_points[i], all_jump_points[i + 1]);
+                path_length += 2*utils::octileDistance(all_jump_points[i], all_jump_points[i + 1]);
             }
             path.reserve(path_length);
 
@@ -268,61 +268,87 @@ namespace {
         // 3. Identify symmetric intervals and key jump points
         std::vector<Vertex> jump_points;
         std::vector<Interval> possible_intervals;
-        jump_points.reserve(all_jump_points.size());  // 预分配内存
-        possible_intervals.reserve(all_jump_points.size() / 2);  // 预分配内存（估计值）
-        
-        for (size_t i = 0; i < all_jump_points.size() - 2; ++i) {
-            const auto& current = all_jump_points[i];
-            const auto& next = all_jump_points[i + 1];
-            const auto& next2 = all_jump_points[i + 2];
-    
-            // Get key action direction
-            Vertex dir1 = utils::calculateDirection(current, next);
-            Vertex dir2 = utils::calculateDirection(next, next2);
-            // If not diagonal-straight pattern, add current jump point directly
-            if (utils::isStraight(dir1) || utils::isDiagonal(dir2)) {
-                jump_points.push_back(current);
-                continue;
-            }
-    
-            // Find symmetric interval
-            for (size_t j = i + 2; j + 1 < all_jump_points.size(); ++j) {
-                const auto& curr_point = all_jump_points[j];
-                const auto& next_point = all_jump_points[j + 1];
-                Vertex curr_dir = utils::calculateDirection(curr_point, next_point);
-    
-                // Check if reached interval end
-                if (curr_dir != dir1 && curr_dir != dir2) {
-                    // Determine interval end position
-                    bool is_diagonal_end = utils::isDiagonal(all_jump_points[j-1], curr_point);
-                    const auto& interval_end = is_diagonal_end ? all_jump_points[j - 1] : curr_point;
+        jump_points.reserve(all_jump_points.size());
+        possible_intervals.reserve(all_jump_points.size() / 2);
+
+        for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
+            // 先检查单个（对角线-直线）模式
+            if (i + 2 < all_jump_points.size()) {
+                const auto& current = all_jump_points[i];
+                const auto& next = all_jump_points[i + 1];
+                const auto& next2 = all_jump_points[i + 2];
+                
+                Vertex dir1 = utils::calculateDirection(current, next);
+                Vertex dir2 = utils::calculateDirection(next, next2);
+                
+                if (utils::isDiagonal(dir1) && utils::isStraight(dir2)) {
+                    // 对于对称区间，添加起点
+                    jump_points.push_back(current);
                     
-                    // Collect all jump points in interval
+                    // 找到一个（对角线-直线）模式
                     std::vector<Vertex> interval_points;
-                    interval_points.reserve(j - i + 1);  // 预分配内存
-                    for (size_t k = i; k <= (is_diagonal_end ? j - 1 : j); ++k) {
-                        interval_points.push_back(all_jump_points[k]);
+                    interval_points.reserve(3);
+                    interval_points.push_back(current);
+                    interval_points.push_back(next);
+                    interval_points.push_back(next2);
+                    
+                    // 继续检查后续是否有相同的模式
+                    size_t j = i + 2;
+                    while (j + 2 < all_jump_points.size()) {
+                        const auto& pattern_start = all_jump_points[j];
+                        const auto& pattern_mid = all_jump_points[j + 1];
+                        const auto& pattern_end = all_jump_points[j + 2];
+                        
+                        Vertex pattern_dir1 = utils::calculateDirection(pattern_start, pattern_mid);
+                        Vertex pattern_dir2 = utils::calculateDirection(pattern_mid, pattern_end);
+                        
+                        // 检查是否是相同的模式
+                        if (utils::isDiagonal(pattern_dir1) && utils::isStraight(pattern_dir2) &&
+                            pattern_dir1 == dir1 && pattern_dir2 == dir2) {
+                            // 添加到当前区间
+                            interval_points.push_back(pattern_mid);
+                            interval_points.push_back(pattern_end);
+                            j += 2;
+                        } else {
+                            break;
+                        }
                     }
                     
-                    // Record interval and update index
-                    possible_intervals.emplace_back(std::move(interval_points));
-                    i = j - (is_diagonal_end ? 1 : 0);
-                    break;
+                    // 记录找到的区间
+                    possible_intervals.emplace_back(interval_points);
+                    
+                    // 更新索引到区间终点，下一轮从这里开始寻找新的对称区间
+                    i = j;
+                    continue;
                 }
             }
-    
-            // Add current jump point regardless of whether an interval is found
-            jump_points.push_back(current);
+            
+            // 如果不是对称区间的起点，直接添加当前跳点
+            jump_points.push_back(all_jump_points[i]);
         }
-    
-        // Add last two jump points
-        if (all_jump_points.size() >= 2) {
-            jump_points.push_back(all_jump_points[all_jump_points.size() - 2]);
-        }
+
+        // 添加最后一个跳点
         if (!all_jump_points.empty()) {
             jump_points.push_back(all_jump_points.back());
         }
-    
+
+        // 打印调试信息
+        if (!possible_intervals.empty()) {
+            logger::log_info("找到对称区间:");
+            for (const auto& interval : possible_intervals) {
+                std::stringstream ss;
+                ss << "区间: ";
+                for (size_t i = 0; i < interval.jump_points.size(); ++i) {
+                    ss << "(" << interval.jump_points[i].x << "," 
+                       << interval.jump_points[i].y << ")";
+                    if (i < interval.jump_points.size() - 1) {
+                        ss << " -> ";
+                    }
+                }
+                logger::log_info(ss.str());
+            }
+        }
+
         return JPSPath(std::move(path), std::move(jump_points), std::move(possible_intervals));
     }
     
@@ -371,6 +397,9 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
             }
             ss << std::endl;
             
+            //打印possible_intervals
+            logger::print_intervals(path.possible_intervals, "Possible intervals: ");
+            
             // 打印路径长度和跳点数量
             ss << "Path length: " << path.path.size() 
                << ", Number of jump points: " << path.jump_points.size();
@@ -400,11 +429,11 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                 h_value,
                 current
             );
-            logger::log_info("生成后继节点: (" + std::to_string(successor.x) + "," + 
-                           std::to_string(successor.y) + "), g值: " + 
-                           std::to_string(tentative_g) + ", 移动代价: " + 
-                           std::to_string(move_cost) + ", h值: " + 
-                           std::to_string(h_value));
+            // logger::log_info("生成后继节点: (" + std::to_string(successor.x) + "," + 
+            //                std::to_string(successor.y) + "), g值: " + 
+            //                std::to_string(tentative_g) + ", 移动代价: " + 
+            //                std::to_string(move_cost) + ", h值: " + 
+            //                std::to_string(h_value));
             state.open_list.push(next_node);
         }
     }

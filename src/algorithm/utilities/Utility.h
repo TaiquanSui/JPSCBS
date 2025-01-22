@@ -29,6 +29,12 @@ namespace utils {
         return std::sqrt(std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2));
     }
 
+    inline double octileDistance(const Vertex& a, const Vertex& b) {
+        int dx = std::abs(a.x - b.x);
+        int dy = std::abs(a.y - b.y);
+        return std::sqrt(2.0) * std::min(dx, dy) + std::max(dx, dy) - std::min(dx, dy);
+    }
+
     inline Vertex calculateDirection(const Vertex& from, const Vertex& to) {
         int dx = (to.x > from.x) ? 1 : ((to.x < from.x) ? -1 : 0);
         int dy = (to.y > from.y) ? 1 : ((to.y < from.y) ? -1 : 0);

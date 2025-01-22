@@ -132,6 +132,7 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
             std::vector<Constraint> constraints = utils::generate_constraints_from_conflict(
                 agent1, agent2, path1, path2);
             if(!constraints.empty()) {
+                logger::print_constraints(constraints, "发现新的约束");
                 return constraints;
             }
         }
@@ -143,25 +144,8 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
 std::vector<Vertex> CBS::find_path(const Agent& agent,
                                  const std::vector<std::vector<int>>& grid,
                                  const std::vector<Constraint>& constraints) {
-    std::stringstream ss;
-    ss << "为智能体 " << agent.id << " 寻找路径，当前约束: [";
-    
-    for (size_t i = 0; i < constraints.size(); ++i) {
-        const auto& constraint = constraints[i];
-        ss << "智能体" << constraint.agent 
-           << "在时间" << constraint.time 
-           << "不能到达位置(" << constraint.vertex.x 
-           << "," << constraint.vertex.y << ")";
-           
-        if (i < constraints.size() - 1) {
-            ss << ", ";
-        }
-    }
-    ss << "]";
-    
-    logger::log_info(ss.str());
-
-
+    logger::print_constraints(constraints, 
+        "为智能体 " + std::to_string(agent.id) + " 寻找路径，当前约束:");
     return a_star(agent.id, agent.start, agent.goal, grid, constraints);
 }
 

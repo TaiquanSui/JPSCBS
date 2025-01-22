@@ -47,6 +47,23 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         open_list.pop();
         
         print_node_info(current, "当前节点");
+
+        std::stringstream ss;
+        ss << "当前节点约束: [";
+        for (size_t i = 0; i < current->constraints.size(); ++i) {
+            const auto& constraint = current->constraints[i];
+            ss << "智能体" << constraint.agent 
+               << "在时间" << constraint.time 
+               << "不能到达位置(" << constraint.vertex.x 
+               << "," << constraint.vertex.y << ")";
+
+            if (i < current->constraints.size() - 1) {
+                ss << ", ";
+            }
+        }
+        ss << "]";
+    
+        logger::log_info(ss.str());
         
         // Update current node's solution
         update_solutions(agents, *current);
@@ -68,6 +85,13 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         
         // 为每个约束创建新的节点
         for (const auto& constraint : new_constraints) {
+            std::string constraint_info = "处理约束: ";
+            constraint_info += "智能体 " + std::to_string(constraint.agent);
+            constraint_info += " 在位置 (" + std::to_string(constraint.vertex.x) + 
+                             "," + std::to_string(constraint.vertex.y) + ")";
+            constraint_info += " 时间 " + std::to_string(constraint.time);
+            logger::log_info(constraint_info);
+
             auto new_node = std::make_shared<JPSCBSNode>(*current);
             new_node->constraints.push_back(constraint);
             resolve_conflict_locally(*new_node, constraint);
@@ -146,7 +170,6 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
     }
 }
 
-
 std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
     
     for (const auto& [agent1, paths1] : node.solution) {
@@ -158,11 +181,14 @@ std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
 
             auto constraints = utils::generate_constraints_from_conflict(agent1, agent2, path1, path2);
             if(!constraints.empty()) {
+                logger::print_constraints(constraints, "发现新的约束");
+                
                 return constraints;
             }
         }
     }
     
+    logger::log_info("未发现新的约束");
     return {};
 }
 
@@ -203,6 +229,12 @@ bool JPSCBS::find_local_bypass(const JPSPath& path, int agent_id,
         std::vector<Constraint> temp_constraints = node.constraints;
         temp_constraints.emplace_back(agent_id, conflict_vertex, start_time);
         
+        logger::log_info("尝试找到local bypass");
+        logger::log_info("agent_id: " + std::to_string(agent_id));
+        logger::log_info("interval: " + logger::vectorToString(interval.jump_points));
+        logger::log_info("start_time: " + std::to_string(start_time));
+        logger::print_constraints(temp_constraints,"temp constrains");
+
         // Try to find an alternative path
         auto alt_path = a_star(agent_id, interval.get_start(), interval.get_end(), 
                              grid, temp_constraints, start_time);
@@ -260,6 +292,11 @@ void JPSCBS::find_and_update_solution(JPSCBSNode& node, int agent_id,
                                     std::vector<Vertex>::const_iterator end_it,
                                     int start_time) {
     // First try to find a path within the current interval
+    logger::log_info("本地冲突解决");
+    logger::log_info("agent_id: " + std::to_string(agent_id));
+    logger::log_info("start_jp: " + std::to_string(start_jp.x) + "," + std::to_string(start_jp.y));
+    logger::log_info("current_path.jump_points[jp_index + 1]: " + std::to_string(current_path.jump_points[jp_index + 1].x) + "," + std::to_string(current_path.jump_points[jp_index + 1].y));
+    logger::log_info("start_time: " + std::to_string(start_time));
     auto new_local_path = a_star(agent_id, start_jp, current_path.jump_points[jp_index + 1],
                                 grid, node.constraints, start_time);
     
@@ -352,36 +389,33 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
     
     // Build new path
     std::vector<Vertex> new_path;
+    new_path.reserve(current_path.path.size() + local_path.size()); // 预分配空间
     
     // 1. 添加起点到start_it之间的路径
-    new_path.insert(new_path.end(), current_path.path.begin(), start_it);
+    new_path.insert(new_path.end(), 
+                   current_path.path.begin(), 
+                   start_it);
     
     // 2. 添加局部路径
-    new_path.insert(new_path.end(), local_path.begin(), local_path.end());
+    new_path.insert(new_path.end(), 
+                   local_path.begin(), 
+                   local_path.end());
     
-    // 3. 添加end_it到终点的路径，注意检查end_it是否为最后一个元素
+    // 3. 添加end_it到终点的路径
     if (end_it != current_path.path.end()) {
-        new_path.insert(new_path.end(), end_it, current_path.path.end());
+        new_path.insert(new_path.end(), 
+                       std::next(end_it), // 跳过end_it本身，避免重复
+                       current_path.path.end());
     }
     
     // Update jump points
     std::vector<Vertex> new_jump_points;
-    auto is_jump_point = [&](const Vertex& v) {
-        return std::find(current_path.jump_points.begin(), 
-                        current_path.jump_points.end(), v) != current_path.jump_points.end();
-    };
+    new_jump_points.reserve(current_path.jump_points.size()); // 预分配空间
     
     // Keep jump points before start point
     for (const auto& jp : current_path.jump_points) {
         if (std::find(current_path.path.begin(), start_it, jp) != start_it) {
             new_jump_points.push_back(jp);
-        }
-    }
-    
-    // Add jump points from local_path
-    for (const auto& v : local_path) {
-        if (is_jump_point(v)) {
-            new_jump_points.push_back(v);
         }
     }
     
@@ -392,6 +426,13 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
                 new_jump_points.push_back(jp);
             }
         }
+    }
+    
+    // 确保新路径有效
+    if (new_path.empty()) {
+        logger::log_warning("生成的新路径为空，保持原路径不变");
+        agent_paths.push(current_path);
+        return;
     }
     
     // Create updated path
@@ -407,7 +448,6 @@ void JPSCBS::print_node_info(const std::shared_ptr<JPSCBSNode>& node, const std:
         logger::log_info(prefix + ":");
     }
     logger::log_info("总代价: " + std::to_string(std::round(node->cost * 1000) / 1000.0));  // 保留3位小数
-    logger::log_info("约束数量: " + std::to_string(node->constraints.size()));
     
     for (const auto& [agent_id, paths] : node->solution) {
         if (!paths.empty()) {

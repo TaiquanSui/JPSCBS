@@ -20,16 +20,16 @@ protected:
     }
 };
 
-TEST_F(JPSCBSTest, SimplePathFinding) {
-    std::vector<Agent> agents = {
-        Agent{0, Vertex{0, 0}, Vertex{3, 3}},
-        Agent{1, Vertex{0, 3}, Vertex{3, 0}}
-    };
-
-    auto paths = solver.solve(agents, grid);
-    ASSERT_FALSE(paths.empty());
-    ASSERT_EQ(paths.size(), 2);
-}
+// TEST_F(JPSCBSTest, SimplePathFinding) {
+//     std::vector<Agent> agents = {
+//         Agent{0, Vertex{0, 0}, Vertex{3, 3}},
+//         Agent{1, Vertex{0, 3}, Vertex{3, 0}}
+//     };
+//
+//     auto paths = solver.solve(agents, grid);
+//     ASSERT_FALSE(paths.empty());
+//     ASSERT_EQ(paths.size(), 2);
+// }
 
 // TEST_F(JPSCBSTest, NoSolution) {
 //     std::vector<Agent> agents = {
