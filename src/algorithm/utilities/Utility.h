@@ -95,6 +95,31 @@ namespace utils {
         return true;
     }
 
+    inline bool validate_constrains(const std::vector<Constraint>& constraints, 
+                                    const std::vector<Vertex>& path) {
+        for (const auto& constraint : constraints) {
+            for (size_t i = 0; i < path.size(); ++i) {
+                if (path[i] == constraint.vertex && i == constraint.time) {
+                    return false;
+                }
+            }   
+        }
+        return true;
+    }
+
+    inline std::vector<Constraint> find_violated_constrains(const std::vector<Constraint>& constraints, 
+                                    const std::vector<Vertex>& path) {
+        std::vector<Constraint> violated_constraints;
+        for (const auto& constraint : constraints) {
+            for (size_t i = 0; i < path.size(); ++i) {
+                if (path[i] == constraint.vertex && i == constraint.time) {
+                    violated_constraints.push_back(constraint);
+                }
+            }   
+        }
+        return violated_constraints;
+    }
+
     inline bool is_valid_move(const std::vector<Constraint>& constraints, 
                       int agent_id, const Vertex& pos, int time) {
         for (const auto& constraint : constraints) {
