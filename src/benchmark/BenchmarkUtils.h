@@ -3,7 +3,8 @@
 
 #include "../algorithm/Agent.h"
 #include "../data_loader/MapLoader.h"
-#include "../algorithm/Utility.h"
+#include "../algorithm/utilities/Utility.h"
+#include "../algorithm/utilities/Log.h"
 #include <chrono>
 #include <iostream>
 #include <iomanip>
@@ -52,6 +53,21 @@ namespace benchmark {
         size_t num_agents;
     };
 
+    // Print result
+    inline void print_result(const std::string& map_file, 
+                           const std::string& scen_file,
+                           const BenchmarkResult& result) {
+        std::cout << std::fixed << std::setprecision(2)
+                  << "Results:\n"
+                  << "  Map: " << map_file << "\n"
+                  << "  Scenario: " << scen_file << "\n"
+                  << "  Total Agents: " << result.num_agents << "\n"
+                  << "  Success: " << (result.success ? "Yes" : "No") << "\n"
+                  << "  Runtime: " << result.runtime << " seconds\n"
+                  << "  Solution Cost: " << result.total_cost << "\n"
+                  << "----------------------------------------" << std::endl;
+    }
+
     // Run benchmark for a single scenario
     BenchmarkResult run_scenario(const std::string& map_file, 
                                const std::string& scen_file,
@@ -69,7 +85,7 @@ namespace benchmark {
             if (!solution.empty()) {
                 total_cost = std::accumulate(solution.begin(), solution.end(), 0,
                     [](int sum, const auto& path) { 
-                        return sum + path.size() - 1; 
+                        return sum + utils::calculate_path_cost(path); 
                     });
             }
             
@@ -84,24 +100,9 @@ namespace benchmark {
             return result;
                       
         } catch (const std::exception& e) {
-            utils::log_error("Error testing " + map_file + " with " + scen_file + ": " + e.what());
+            logger::log_error("Error testing " + map_file + " with " + scen_file + ": " + e.what());
             throw;
         }
-    }
-
-    // Print result
-    inline void print_result(const std::string& map_file, 
-                           const std::string& scen_file,
-                           const BenchmarkResult& result) {
-        std::cout << std::fixed << std::setprecision(2)
-                  << "Results:\n"
-                  << "  Map: " << map_file << "\n"
-                  << "  Scenario: " << scen_file << "\n"
-                  << "  Total Agents: " << result.num_agents << "\n"
-                  << "  Success: " << (result.success ? "Yes" : "No") << "\n"
-                  << "  Runtime: " << result.runtime << " seconds\n"
-                  << "  Solution Cost: " << result.total_cost << "\n"
-                  << "----------------------------------------" << std::endl;
     }
 
     // Run benchmark for all scenarios
@@ -123,7 +124,7 @@ namespace benchmark {
                 if (map_entry.path().extension() == ".map") {
                     std::string map_path = map_entry.path().string();
                     std::string map_name = get_map_name(map_path);
-                    utils::log_info("Testing map: " + map_name);
+                    logger::log_info("Testing map: " + map_name);
                     
                     // Test random and even scenarios
                     struct ScenType {
@@ -132,14 +133,14 @@ namespace benchmark {
                     };
 
                     for (const ScenType& scenario : {
-                        ScenType{"random", random_scen_dir},
-                        ScenType{"even", even_scen_dir}
+                        ScenType{"even", even_scen_dir},
+                        ScenType{"random", random_scen_dir}
                     }) {
                         for (int i = 1; i <= 25; ++i) {
                             std::string scen_file = make_scen_path(scenario.dir.string(), 
                                                                  map_name, scenario.name, i);
                             if (fs::exists(scen_file)) {
-                                utils::log_info("Testing " + std::string(scenario.name) + " scenario " + 
+                                logger::log_info("Testing " + std::string(scenario.name) + " scenario " + 
                                              std::to_string(i));
                                 results.push_back(run_scenario(map_path, scen_file, solver));
                             }
@@ -148,7 +149,7 @@ namespace benchmark {
                 }
             }
         } catch (const std::exception& e) {
-            utils::log_error(e.what());
+            logger::log_error(e.what());
             throw;
         }
         

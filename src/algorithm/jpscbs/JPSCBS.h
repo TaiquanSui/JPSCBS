@@ -13,6 +13,7 @@
 #include <tuple>
 #include <chrono>
 #include <iostream>
+#include <sstream>
 
 struct JPSCBSNode {
     // Multiple paths for each agent (sorted by cost)
@@ -51,6 +52,23 @@ struct ConstraintInfo {
         : constraint(c), jp1_path_index(jp1_path_index_), jp2_path_index(jp2_path_index_), 
           constraint_path_index(constraint_path_index_), jp1(jp1_), jp2(jp2_), 
           jp1_jumps_index(jp1_jumps_index_), jp2_jumps_index(jp2_jumps_index_) {}
+
+    std::string toString() const {
+        std::stringstream ss;
+        ss << "ConstraintInfo{\n"
+           << "  constraint: 智能体 " << constraint.agent 
+           << " 在时间 " << constraint.time 
+           << " 不能到达位置(" << constraint.vertex.x << "," << constraint.vertex.y << ")\n"
+           << "  jp1: (" << jp1.x << "," << jp1.y 
+           << ") [path_idx: " << jp1_path_index 
+           << ", jumps_idx: " << jp1_jumps_index << "]\n"
+           << "  jp2: (" << jp2.x << "," << jp2.y 
+           << ") [path_idx: " << jp2_path_index 
+           << ", jumps_idx: " << jp2_jumps_index << "]\n"
+           << "  constraint_path_index: " << constraint_path_index << "\n"
+           << "}";
+        return ss.str();
+    }
 };
 
 class JPSCBS {
@@ -69,7 +87,7 @@ private:
     
     // Timeout related
     std::chrono::steady_clock::time_point start_time;
-    double time_limit = 30.0;  // Default 30 seconds timeout
+    double time_limit = 0.1;
     
     // Core functions
     JPSPath search_by_jps(const Agent& agent);
@@ -87,12 +105,7 @@ private:
                                   const Vertex& jp2, 
                                   const Vertex& next_jp);
     
-    bool is_timeout() const {
-        auto current_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>
-                       (current_time - start_time);
-        return duration.count() / 1000.0 > time_limit;
-    }
+    bool is_timeout() const;
     int count_conflicts(const JPSCBSNode& node);
 
     void print_node_info(const JPSCBSNode& node, const std::string& prefix);

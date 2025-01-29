@@ -5,90 +5,90 @@
 std::vector<std::vector<int>> load_map(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        throw std::runtime_error("Cannot open map file: " + filename);
+        throw std::runtime_error("无法打开地图文件: " + filename);
     }
 
     std::string line;
     int width = 0, height = 0;
 
-    // Read map information
-    std::getline(file, line); // type octile
-    std::getline(file, line); // height
-    sscanf(line.c_str(), "height %d", &height);
-    std::getline(file, line); // width
-    sscanf(line.c_str(), "width %d", &width);
-    std::getline(file, line); // map
+    // 读取头信息
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
+        
+        std::istringstream iss(line);
+        std::string key;
+        iss >> key;
+        
+        if (key == "height") {
+            iss >> height;
+        } else if (key == "width") {
+            iss >> width;
+        } else if (key == "map") {
+            break;  // 地图内容开始
+        }
+    }
 
     if (width <= 0 || height <= 0) {
-        throw std::runtime_error("Invalid map dimensions");
+        throw std::runtime_error("地图尺寸无效");
     }
 
-    // Read map data
-    std::vector<std::vector<int>> grid;
-    while (std::getline(file, line)) {
-        if (line.empty()) continue;  // Skip empty lines
-        
-        std::vector<int> row;
-        row.reserve(width);  // Preallocate memory for performance
-        
-        for (char cell : line) {
-            if (cell == '.') {
-                row.push_back(0);  // Passable area
-            } else if (cell == '@' || cell == 'T') {
-                row.push_back(1);  // Obstacle
-            }
+    // 读取地图内容
+    std::vector<std::vector<int>> map(height, std::vector<int>(width, 0));
+    int row = 0;
+    while (std::getline(file, line) && row < height) {
+        if (line.empty()) continue;
+        if (line.length() < width) {
+            throw std::runtime_error("地图行长度不足");
         }
-
-        if (!row.empty()) {
-            if (row.size() != width) {
-                throw std::runtime_error("Inconsistent map width at row " + 
-                                       std::to_string(grid.size()));
-            }
-            grid.push_back(row);
+        
+        for (int col = 0; col < width; ++col) {
+            // 0表示可通行(@或.), 1表示障碍物(T)
+            map[row][col] = (line[col] == 'T') ? 1 : 0;
         }
+        ++row;
     }
 
-    if (grid.size() != height) {
-        throw std::runtime_error("Inconsistent map height");
+    if (row != height) {
+        throw std::runtime_error("地图行数不足");
     }
 
-    return grid;
+    return map;
 }
 
 std::vector<Agent> load_scen(const std::string& filename) {
-    std::vector<Agent> agents;
     std::ifstream file(filename);
     if (!file.is_open()) {
-        throw std::runtime_error("Cannot open scenario file: " + filename);
+        throw std::runtime_error("无法打开场景文件: " + filename);
     }
 
+    std::vector<Agent> agents;
     std::string line;
-    // Skip first line (version information)
+    int agent_id = 0;
+
+    // 跳过版本行
     std::getline(file, line);
 
-    int agent_id = 0;  // Assign a unique agent ID to each scenario
-    // Read each line of scenario
+    // 读取每个场景
     while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        int bucket;
-        std::string map_name;
-        int height, width;
-        int start_x, start_y, goal_x, goal_y;
-        float optimal_length;
+        if (line.empty()) continue;
 
-        // Parse line data
-        if (!(iss >> bucket >> map_name >> height >> width 
-              >> start_x >> start_y >> goal_x >> goal_y 
-              >> optimal_length)) {
-            continue;  // Skip invalid lines
+        std::istringstream iss(line);
+        std::string bucket, map_name;
+        int width, height, start_x, start_y, goal_x, goal_y;
+        double optimal_length;
+
+        // 解析场景行
+        if (!(iss >> bucket >> map_name >> width >> height 
+              >> start_x >> start_y >> goal_x >> goal_y >> optimal_length)) {
+            continue;  // 跳过无效行
         }
 
-        // Create new agent
-        agents.emplace_back(agent_id++, Vertex(start_x, start_y), Vertex(goal_x, goal_y));
-    }
-
-    if (agents.empty()) {
-        throw std::runtime_error("No valid scenarios found in file: " + filename);
+        // 创建新的Agent
+        agents.emplace_back(
+            agent_id++,
+            Vertex(start_x, start_y),
+            Vertex(goal_x, goal_y)
+        );
     }
 
     return agents;

@@ -19,10 +19,10 @@ namespace {
     bool check_diagonal_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
         bool forced = false;
         
-        if (!utils::isWalkable(grid, x - dx, y) && utils::isWalkable(grid, x - dx, y + dy))
-            forced = true;  // 检查反方向的强制邻居
-        if (!utils::isWalkable(grid, x, y - dy) && utils::isWalkable(grid, x + dx, y - dy))
-            forced = true;  // 检查垂直方向的强制邻居
+        if (!utils::isWalkable(grid, x + dx, y) && utils::isWalkable(grid, x + 2*dx, y))
+            forced = true;
+        if (!utils::isWalkable(grid, x, y + dy) && utils::isWalkable(grid, x , y + 2*dy))
+            forced = true;
         
         return forced;
     }
@@ -199,8 +199,8 @@ namespace {
             // 5: add n to successors(x)
             if (jump_point.x != -1) {
                 successors.push_back(jump_point);
-                logger::log_info("Jump point found: (" + std::to_string(jump_point.x) + "," + 
-                               std::to_string(jump_point.y) + ") - added to successors");
+                // logger::log_info("Jump point found: (" + std::to_string(jump_point.x) + "," + 
+                //                std::to_string(jump_point.y) + ") - added to successors");
             }
         }
 
@@ -332,23 +332,7 @@ namespace {
             jump_points.push_back(all_jump_points.back());
         }
 
-        // 打印调试信息
-        if (!possible_intervals.empty()) {
-            logger::log_info("找到对称区间:");
-            for (const auto& interval : possible_intervals) {
-                std::stringstream ss;
-                ss << "区间: ";
-                for (size_t i = 0; i < interval.jump_points.size(); ++i) {
-                    ss << "(" << interval.jump_points[i].x << "," 
-                       << interval.jump_points[i].y << ")";
-                    if (i < interval.jump_points.size() - 1) {
-                        ss << " -> ";
-                    }
-                }
-                logger::log_info(ss.str());
-            }
-        }
-
+        
         return JPSPath(std::move(path), std::move(jump_points), std::move(possible_intervals));
     }
     
@@ -359,18 +343,23 @@ namespace {
 JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                          const std::vector<std::vector<int>>& grid,
                          JPSState& state) {
-    // Initialize starting node on first search
-    if (state.open_list.empty()) {
-        auto start_node = std::make_shared<AStarNode>(
-            start, 0, heuristic(start, goal));
-        state.open_list.push(start_node);
-    }
 
     while (!state.open_list.empty()) {
+        // std::stringstream ss;
+        // ss << "当前open_list中的节点: ";
+        
+        // // 创建临时队列用于遍历
+        // auto temp_queue = state.open_list;
+        // while(!temp_queue.empty()) {
+        //     auto node = temp_queue.top();
+        //     ss << "(" << node->pos.x << "," << node->pos.y << ")[g=" 
+        //        << node->g << ",h=" << node->h << "] ";
+        //     temp_queue.pop();
+        // }
+        // logger::log_info(ss.str());
+
         auto current = state.open_list.top();
         state.open_list.pop();
-        
-        // 将节点加入closed_list
         state.closed_list.push_back(current);
 
         if (current->pos == goal) {
@@ -400,19 +389,15 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
             //打印possible_intervals
             logger::print_intervals(path.possible_intervals, "Possible intervals: ");
             
-            // 打印路径长度和跳点数量
-            ss << "Path length: " << path.path.size() 
-               << ", Number of jump points: " << path.jump_points.size();
-            
             logger::log_info(ss.str());
             
             return path;
         }
 
-        logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," + 
-                       std::to_string(current->pos.y) + "), g值: " + 
-                       std::to_string(current->g) + ", h值: " + 
-                       std::to_string(current->h));
+        // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," + 
+        //                std::to_string(current->pos.y) + "), g值: " + 
+        //                std::to_string(current->g) + ", h值: " + 
+        //                std::to_string(current->h));
         
         // identify_successors
         std::vector<Vertex> successors = identify_successors(current, grid, goal);

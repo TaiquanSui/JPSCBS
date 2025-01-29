@@ -107,10 +107,12 @@ namespace utils {
         return true;
     }
 
-    inline std::vector<Constraint> find_violated_constrains(const std::vector<Constraint>& constraints, 
-                                    const std::vector<Vertex>& path) {
+    inline std::vector<Constraint> find_violated_constrains(int agent_id, 
+                                    const std::vector<Vertex>& path,
+                                    const std::vector<Constraint>& constraints) {
         std::vector<Constraint> violated_constraints;
         for (const auto& constraint : constraints) {
+            if(constraint.agent != agent_id) continue;
             for (size_t i = 0; i < path.size(); ++i) {
                 if (path[i] == constraint.vertex && i == constraint.time) {
                     violated_constraints.push_back(constraint);
@@ -180,8 +182,8 @@ namespace utils {
                     continue;
                 }
                 if (next_pos2 == pos1) { // agent2 follows agent1
-                    constraints.emplace_back(agent1_id, pos1, t+1);
-                    constraints.emplace_back(agent2_id, pos1, t);
+                    constraints.emplace_back(agent1_id, pos1, t);
+                    constraints.emplace_back(agent2_id, pos1, t+1);
                     continue;
                 }
             }

@@ -11,7 +11,7 @@ int main() {
             }
         );
     } catch (const std::exception& e) {
-        utils::log_error(e.what());
+        logger::log_error(e.what());
         return 1;
     }
     return 0;
