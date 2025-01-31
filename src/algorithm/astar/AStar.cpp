@@ -37,7 +37,7 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
 
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
-            logger::log_info("找到路径: " + logger::vectorToString(path));
+            // logger::log_info("Path found: " + logger::vectorToString(path));
             return path;
         }
 
@@ -64,16 +64,16 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
             auto neighbor_node = std::make_shared<AStarNode>(
                 neighbor, tentative_g, heuristic(neighbor, goal), current);
             
-            // logger::log_info("生成后继节点: (" + std::to_string(neighbor.x) + "," +
-            //                std::to_string(neighbor.y) + "), g值: " +
+            // logger::log_info("Generated successor node: (" + std::to_string(neighbor.x) + "," +
+            //                std::to_string(neighbor.y) + "), g-value: " +
             //                std::to_string(tentative_g) +
-            //                ", h值: " + std::to_string(heuristic(neighbor, goal)));
+            //                ", h-value: " + std::to_string(heuristic(neighbor, goal)));
             
             open_list.push(neighbor_node);
         }
     }
 
-    logger::log_info("未找到路径");
+    logger::log_info("No path found");
     return {};
 }
 
@@ -101,21 +101,22 @@ std::vector<Vertex> a_star(int agent_id,
         open_list.pop();
 
         // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," +
-        //                std::to_string(current->pos.y) + "), g值: " +
-        //                std::to_string(current->g) + ", h值: " +
-        //                std::to_string(current->h) + ", 时间: " +
+        //                std::to_string(current->pos.y) + "), g-value: " +
+        //                std::to_string(current->g) + ", h-value: " +
+        //                std::to_string(current->h) + ", time: " +
         //                std::to_string(current->time));
+
         // 如果超过最大时间限制，认为无解
         if (current->time >= MAX_TIME) {
-            logger::log_info("智能体 " + std::to_string(agent_id) + 
-                           " 搜索超过最大时间限制，认为无解");
+            logger::log_info("Agent " + std::to_string(agent_id) + 
+                           " search exceeded maximum time limit, no solution found");
             return {};
         }
 
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
-            logger::log_info("智能体 " + std::to_string(agent_id) + " 找到路径: " + 
-                           logger::vectorToString(path));
+            // logger::log_info("Agent " + std::to_string(agent_id) + " found path: " + 
+            //                logger::vectorToString(path));
             return path;
         }
 
@@ -153,16 +154,16 @@ std::vector<Vertex> a_star(int agent_id,
             auto next_node = std::make_shared<AStarNode>(
                 next_pos, tentative_g, heuristic(next_pos, goal), current, next_time);
 
-            // logger::log_info("生成后继节点: (" + std::to_string(next_pos.x) + "," +
-            //                std::to_string(next_pos.y) + "), g值: " +
+            // logger::log_info("Generated successor node: (" + std::to_string(next_pos.x) + "," +
+            //                std::to_string(next_pos.y) + "), g-value: " +
             //                std::to_string(tentative_g) +
-            //                ", h值: " + std::to_string(heuristic(next_pos, goal)) +
-            //                ", 时间: " + std::to_string(next_time));
+            //                ", h-value: " + std::to_string(heuristic(next_pos, goal)) +
+            //                ", time: " + std::to_string(next_time));
             
             open_list.push(next_node);
         }
     }
 
-    logger::log_info("智能体 " + std::to_string(agent_id) + " 未找到路径");
+    // logger::log_info("Agent " + std::to_string(agent_id) + " found no path");
     return {};
 }

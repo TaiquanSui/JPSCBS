@@ -5,6 +5,8 @@
 #include "../data_loader/MapLoader.h"
 #include "../algorithm/utilities/Utility.h"
 #include "../algorithm/utilities/Log.h"
+#include "../algorithm/cbs/CBS.h"
+#include "../algorithm/jpscbs/JPSCBS.h"
 #include <chrono>
 #include <iostream>
 #include <iomanip>
@@ -12,149 +14,105 @@
 #include <filesystem>
 #include <string>
 #include <functional>
+#include <fstream>
+#include <future>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 
-namespace benchmark {
-    namespace fs = std::filesystem;
+#ifdef __linux__
+    #include <pthread.h>
+#elif _WIN32
+    #define NOMINMAX
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+#endif
 
-    // Get project root directory
-    inline std::string get_project_root() {
-        fs::path current_path = fs::current_path();
-        while (!fs::exists(current_path / "data")) {
-            if (current_path.parent_path() == current_path) {
-                throw std::runtime_error("Cannot find project root directory");
-            }
-            current_path = current_path.parent_path();
-        }
-        return current_path.string();
+namespace fs = std::filesystem;
+
+using SolverFunction = std::function<std::vector<std::vector<Vertex>>(
+    const std::vector<Agent>&, const std::vector<std::vector<int>>&)>;
+
+struct BenchmarkResult {
+    bool success;
+    double runtime;
+    int total_cost;
+    size_t num_agents;
+    int nodes_expanded;
+    std::string map_name;
+    std::string scen_name;
+};
+
+struct BenchmarkStats {
+    int total_instances;
+    int successful_instances;
+    double avg_runtime;
+    double avg_nodes_expanded;
+    double success_rate;
+    
+    void print() const;
+};
+
+class ThreadSafeInterruptor {
+private:
+    std::atomic<bool> interrupted{false};
+    std::mutex mtx;
+    std::condition_variable cv;
+
+public:
+    void interrupt();
+    bool is_interrupted() const;
+    void reset();
+    
+    template<typename Duration>
+    bool wait_for(Duration duration) {
+        std::unique_lock<std::mutex> lock(mtx);
+        return !cv.wait_for(lock, duration, [interrupted = &this->interrupted] { 
+            return interrupted->load(); 
+        });
     }
+};
 
-    // Extract map name from map file path
-    inline std::string get_map_name(const std::string& map_path) {
-        fs::path path(map_path);
-        return path.stem().string();  // Use stem() to get filename without extension
-    }
-
-    // Build scenario file path
-    inline std::string make_scen_path(const std::string& scen_dir, 
+class BenchmarkUtils {
+public:
+    static std::string get_project_root();
+    static std::string get_map_name(const std::string& map_path);
+    static std::string make_scen_path(const std::string& scen_dir, 
                                     const std::string& map_name,
                                     const std::string& type,
-                                    int index) {
-        return (fs::path(scen_dir) / 
-                (map_name + "-" + type + "-" + std::to_string(index) + ".scen")).string();
-    }
-
-    using SolverFunction = std::function<std::vector<std::vector<Vertex>>(
-        const std::vector<Agent>&, const std::vector<std::vector<int>>&)>;
-
-    struct BenchmarkResult {
-        bool success;
-        double runtime;
-        int total_cost;
-        size_t num_agents;
-    };
-
-    // Print result
-    inline void print_result(const std::string& map_file, 
+                                    int index);
+    
+    static void print_result(const std::string& map_file, 
                            const std::string& scen_file,
-                           const BenchmarkResult& result) {
-        std::cout << std::fixed << std::setprecision(2)
-                  << "Results:\n"
-                  << "  Map: " << map_file << "\n"
-                  << "  Scenario: " << scen_file << "\n"
-                  << "  Total Agents: " << result.num_agents << "\n"
-                  << "  Success: " << (result.success ? "Yes" : "No") << "\n"
-                  << "  Runtime: " << result.runtime << " seconds\n"
-                  << "  Solution Cost: " << result.total_cost << "\n"
-                  << "----------------------------------------" << std::endl;
-    }
+                           const BenchmarkResult& result);
+                           
+    static BenchmarkStats calculate_stats(const std::vector<BenchmarkResult>& results);
+    
+    static void write_results_to_csv(const std::string& filename, 
+                                   const std::vector<BenchmarkResult>& results);
+                                   
+    static void write_comparison_results_to_csv(const std::string& filename,
+                                              const std::vector<BenchmarkResult>& cbs_results,
+                                              const std::vector<BenchmarkResult>& jpscbs_results);
+                                              
+    static void set_thread_affinity(int cpu_id);
+    
+    static std::vector<BenchmarkResult> run_scen_file(const std::string& map_file,
+                                                     const std::string& scen_file,
+                                                     SolverFunction solver,
+                                                     double time_limit = 30.0);
+                                                     
+    static std::pair<std::vector<BenchmarkResult>, std::vector<BenchmarkResult>> 
+    run_algorithm_comparison(const std::string& map_file,
+                           const std::string& scen_file,
+                           SolverFunction cbs_solver,
+                           SolverFunction jpscbs_solver,
+                           double time_limit = 30.0,
+                           int cpu_core = 0);
+                           
+    static void run_all_scenarios(SolverFunction solver);
+    static void run_all_scenarios_comparison(SolverFunction solver1, SolverFunction solver2);
+};
 
-    // Run benchmark for a single scenario
-    BenchmarkResult run_scenario(const std::string& map_file, 
-                               const std::string& scen_file,
-                               SolverFunction solver) {
-        try {
-            auto grid = load_map(map_file);
-            auto scenarios = load_scen(scen_file);
-            
-            auto start_time = std::chrono::high_resolution_clock::now();
-            auto solution = solver(scenarios, grid);
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::high_resolution_clock::now() - start_time).count();
-                
-            int total_cost = 0;
-            if (!solution.empty()) {
-                total_cost = std::accumulate(solution.begin(), solution.end(), 0,
-                    [](int sum, const auto& path) { 
-                        return sum + utils::calculate_path_cost(path); 
-                    });
-            }
-            
-            BenchmarkResult result{
-                !solution.empty(),
-                duration / 1000.0,
-                total_cost,
-                scenarios.size()
-            };
-
-            print_result(map_file, scen_file, result);
-            return result;
-                      
-        } catch (const std::exception& e) {
-            logger::log_error("Error testing " + map_file + " with " + scen_file + ": " + e.what());
-            throw;
-        }
-    }
-
-    // Run benchmark for all scenarios
-    std::vector<BenchmarkResult> run_all_scenarios(SolverFunction solver) {
-        std::vector<BenchmarkResult> results;
-        
-        try {
-            std::string root_dir = get_project_root();
-            fs::path data_dir = fs::path(root_dir) / "data";
-            fs::path maps_dir = data_dir / "mapf-map";
-            fs::path random_scen_dir = data_dir / "mapf-scen-random";
-            fs::path even_scen_dir = data_dir / "mapf-scen-even";
-            
-            if (!fs::exists(maps_dir)) {
-                throw std::runtime_error("Maps directory not found: " + maps_dir.string());
-            }
-            
-            for (const auto& map_entry : fs::directory_iterator(maps_dir)) {
-                if (map_entry.path().extension() == ".map") {
-                    std::string map_path = map_entry.path().string();
-                    std::string map_name = get_map_name(map_path);
-                    logger::log_info("Testing map: " + map_name);
-                    
-                    // Test random and even scenarios
-                    struct ScenType {
-                        const char* name;
-                        fs::path dir;
-                    };
-
-                    for (const ScenType& scenario : {
-                        ScenType{"even", even_scen_dir},
-                        ScenType{"random", random_scen_dir}
-                    }) {
-                        for (int i = 1; i <= 25; ++i) {
-                            std::string scen_file = make_scen_path(scenario.dir.string(), 
-                                                                 map_name, scenario.name, i);
-                            if (fs::exists(scen_file)) {
-                                logger::log_info("Testing " + std::string(scenario.name) + " scenario " + 
-                                             std::to_string(i));
-                                results.push_back(run_scenario(map_path, scen_file, solver));
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (const std::exception& e) {
-            logger::log_error(e.what());
-            throw;
-        }
-        
-        return results;
-    }
-}
-
-#endif // BENCHMARK_UTILS_H 
+#endif // BENCHMARK_UTILS_H

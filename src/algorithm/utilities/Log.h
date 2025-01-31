@@ -79,18 +79,18 @@ namespace logger {
         }
         
         if (constraints.empty()) {
-            log_info("没有约束");
+            log_info("No constraints");
             return;
         }
 
         std::stringstream ss;
-        ss << "约束列表: [";
+        ss << "Constraint list: [";
         for (size_t i = 0; i < constraints.size(); ++i) {
             const auto& constraint = constraints[i];
-            ss << "智能体" << constraint.agent 
-               << "在时间" << constraint.time 
-               << "不能到达位置(" << constraint.vertex.x 
-               << "," << constraint.vertex.y << ")";
+            ss << "Agent " << constraint.agent 
+               << " cannot reach position (" << constraint.vertex.x 
+               << "," << constraint.vertex.y << ") at time " 
+               << constraint.time;
                
             if (i < constraints.size() - 1) {
                 ss << ", ";
@@ -108,10 +108,10 @@ namespace logger {
         }
         
         std::stringstream ss;
-        ss << "约束: 智能体 " << constraint.agent 
-           << " 在时间 " << constraint.time 
-           << " 不能到达位置 (" << constraint.vertex.x 
-           << "," << constraint.vertex.y << ")";
+        ss << "Constraint: Agent " << constraint.agent 
+           << " cannot reach position (" << constraint.vertex.x 
+           << "," << constraint.vertex.y << ") at time " 
+           << constraint.time;
         log_info(ss.str());
     }
 
@@ -122,10 +122,10 @@ namespace logger {
         }
         
         std::stringstream ss;
-        ss << "区间: ";
-        ss << "起点(" << interval.get_start().x << "," << interval.get_start().y << ") -> ";
-        ss << "终点(" << interval.get_end().x << "," << interval.get_end().y << ")";
-        ss << " 跳点: ";
+        ss << "Interval: ";
+        ss << "Start(" << interval.get_start().x << "," << interval.get_start().y << ") -> ";
+        ss << "End(" << interval.get_end().x << "," << interval.get_end().y << ")";
+        ss << " Jump points: ";
         for (size_t i = 0; i < interval.jump_points.size(); ++i) {
             ss << "(" << interval.jump_points[i].x << "," << interval.jump_points[i].y << ")";
             if (i < interval.jump_points.size() - 1) {
@@ -143,20 +143,20 @@ namespace logger {
         }
         
         if (intervals.empty()) {
-            log_info("没有对称区间");
+            log_info("No symmetric intervals");
             return;
         }
 
-        log_info("对称区间列表:");
+        log_info("Symmetric interval list:");
         for (size_t i = 0; i < intervals.size(); ++i) {
             std::stringstream ss;
-            ss << "区间 " << i + 1 << ": ";
-            ss << "起点(" << intervals[i].get_start().x << "," << intervals[i].get_start().y << ") -> ";
-            ss << "终点(" << intervals[i].get_end().x << "," << intervals[i].get_end().y << ")";
+            ss << "Interval " << i + 1 << ": ";
+            ss << "Start(" << intervals[i].get_start().x << "," << intervals[i].get_start().y << ") -> ";
+            ss << "End(" << intervals[i].get_end().x << "," << intervals[i].get_end().y << ")";
             log_info(ss.str());
             
             ss.str("");
-            ss << "    跳点: ";
+            ss << "    Jump points: ";
             for (size_t j = 0; j < intervals[i].jump_points.size(); ++j) {
                 ss << "(" << intervals[i].jump_points[j].x << "," << intervals[i].jump_points[j].y << ")";
                 if (j < intervals[i].jump_points.size() - 1) {

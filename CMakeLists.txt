@@ -31,6 +31,8 @@ file(GLOB_RECURSE PROJECT_SOURCES
     "src/algorithm/*.h"
     "src/data_loader/*.cpp"
     "src/data_loader/*.h"
+    "src/benchmark/*.cpp"
+    "src/benchmark/*.h"
 )
 
 # 创建库
@@ -46,4 +48,7 @@ target_link_libraries(cbs_benchmark PRIVATE project_lib)
 
 add_executable(jpscbs_benchmark src/benchmark/JPSCBSBenchmark.cpp)
 target_link_libraries(jpscbs_benchmark PRIVATE project_lib)
+
+add_executable(comparison_benchmark src/benchmark/Benchmark.cpp)
+target_link_libraries(comparison_benchmark PRIVATE project_lib)
 

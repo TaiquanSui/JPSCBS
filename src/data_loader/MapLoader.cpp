@@ -42,8 +42,26 @@ std::vector<std::vector<int>> load_map(const std::string& filename) {
         }
         
         for (int col = 0; col < width; ++col) {
-            // 0表示可通行(@或.), 1表示障碍物(T)
-            map[row][col] = (line[col] == 'T') ? 1 : 0;
+            char c = line[col];
+            // 0表示可通行(. 或 G), 1表示不可通行(T, @, O)
+            // 注意：目前将S(沼泽)和W(水)视为可通行，但后续可能需要特殊处理
+            switch(c) {
+                case '.':
+                case 'G':
+                    map[row][col] = 0;  // 可通行
+                    break;
+                case '@':
+                case 'O':
+                case 'T':
+                    map[row][col] = 1;  // 不可通行
+                    break;
+                case 'S':
+                case 'W':
+                    map[row][col] = 0;  // 暂时视为可通行
+                    break;
+                default:
+                    throw std::runtime_error("地图包含未知字符: " + std::string(1, c));
+            }
         }
         ++row;
     }
@@ -63,7 +81,7 @@ std::vector<Agent> load_scen(const std::string& filename) {
 
     std::vector<Agent> agents;
     std::string line;
-    int agent_id = 0;
+    int agent_id = 0;  // 为每个agent分配递增的ID
 
     // 跳过版本行
     std::getline(file, line);

@@ -141,55 +141,55 @@ namespace utils {
         return duration.count() / 1000.0;
     }
 
-    // detect path conflicts and return constraints for both agents
-    inline std::vector<Constraint> generate_constraints_from_conflict(
-        int agent1_id, int agent2_id,
-        const std::vector<Vertex>& path1,
-        const std::vector<Vertex>& path2
-    ) {
-        std::vector<Constraint> constraints;  // 存储所有约束
-        size_t max_length = std::max(path1.size(), path2.size());
+    // // detect path conflicts and return constraints for both agents
+    // inline std::vector<Constraint> generate_constraints_from_conflict(
+    //     int agent1_id, int agent2_id,
+    //     const std::vector<Vertex>& path1,
+    //     const std::vector<Vertex>& path2
+    // ) {
+    //     std::vector<Constraint> constraints;  // 存储所有约束
+    //     size_t max_length = std::max(path1.size(), path2.size());
         
-        // check each time step
-        for (size_t t = 0; t < max_length; ++t) {
-            // get current position (if path ends, use goal)
-            Vertex pos1 = t < path1.size() ? path1[t] : path1.back();
-            Vertex pos2 = t < path2.size() ? path2[t] : path2.back();
+    //     // check each time step
+    //     for (size_t t = 0; t < max_length; ++t) {
+    //         // get current position (if path ends, use goal)
+    //         Vertex pos1 = t < path1.size() ? path1[t] : path1.back();
+    //         Vertex pos2 = t < path2.size() ? path2[t] : path2.back();
 
-            // check vertex conflict
-            if (pos1 == pos2) {
-                constraints.emplace_back(agent1_id, pos1, t);
-                constraints.emplace_back(agent2_id, pos2, t);
-                continue;
-            }
+    //         // check vertex conflict
+    //         if (pos1 == pos2) {
+    //             constraints.emplace_back(agent1_id, pos1, t);
+    //             constraints.emplace_back(agent2_id, pos2, t);
+    //             continue;
+    //         }
 
-            // check following and swapping conflicts
-            if (t < max_length - 1) {
-                Vertex next_pos1 = (t + 1) < path1.size() ? path1[t + 1] : path1.back();
-                Vertex next_pos2 = (t + 1) < path2.size() ? path2[t + 1] : path2.back();
+    //         // check following and swapping conflicts
+    //         if (t < max_length - 1) {
+    //             Vertex next_pos1 = (t + 1) < path1.size() ? path1[t + 1] : path1.back();
+    //             Vertex next_pos2 = (t + 1) < path2.size() ? path2[t + 1] : path2.back();
                 
-                // check swapping conflict
-                if (pos1 == next_pos2 && pos2 == next_pos1) {
-                    constraints.emplace_back(agent1_id, pos1, t);
-                    constraints.emplace_back(agent2_id, pos2, t);
-                    continue;
-                }
+    //             // check swapping conflict
+    //             if (pos1 == next_pos2 && pos2 == next_pos1) {
+    //                 constraints.emplace_back(agent1_id, pos1, t);
+    //                 constraints.emplace_back(agent2_id, pos2, t);
+    //                 continue;
+    //             }
                 
-                // check following conflict
-                if (next_pos1 == pos2) { // agent1 follows agent2
-                    constraints.emplace_back(agent1_id, pos2, t+1);
-                    constraints.emplace_back(agent2_id, pos2, t);
-                    continue;
-                }
-                if (next_pos2 == pos1) { // agent2 follows agent1
-                    constraints.emplace_back(agent1_id, pos1, t);
-                    constraints.emplace_back(agent2_id, pos1, t+1);
-                    continue;
-                }
-            }
-        }
-        return constraints;
-    }
+    //             // check following conflict
+    //             if (next_pos1 == pos2) { // agent1 follows agent2
+    //                 constraints.emplace_back(agent1_id, pos2, t+1);
+    //                 constraints.emplace_back(agent2_id, pos2, t);
+    //                 continue;
+    //             }
+    //             if (next_pos2 == pos1) { // agent2 follows agent1
+    //                 constraints.emplace_back(agent1_id, pos1, t);
+    //                 constraints.emplace_back(agent2_id, pos1, t+1);
+    //                 continue;
+    //             }
+    //         }
+    //     }
+    //     return constraints;
+    // }
 
     inline int count_conflicts(
         int agent1_id, int agent2_id,
@@ -224,14 +224,14 @@ namespace utils {
                 }
                 
                 // check following conflict
-                if (next_pos1 == pos2) { // agent1 follows agent2
-                    conflict_count++;
-                    continue;
-                }
-                if (next_pos2 == pos1) { // agent2 follows agent1
-                    conflict_count++;
-                    continue;
-                }
+                // if (next_pos1 == pos2) { // agent1 follows agent2
+                //     conflict_count++;
+                //     continue;
+                // }
+                // if (next_pos2 == pos1) { // agent2 follows agent1
+                //     conflict_count++;
+                //     continue;
+                // }
             }
         }
     

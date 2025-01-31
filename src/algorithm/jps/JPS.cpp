@@ -346,9 +346,9 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
 
     while (!state.open_list.empty()) {
         // std::stringstream ss;
-        // ss << "当前open_list中的节点: ";
+        // ss << "Current nodes in open_list: ";
         
-        // // 创建临时队列用于遍历
+        // // Create temporary queue for traversal
         // auto temp_queue = state.open_list;
         // while(!temp_queue.empty()) {
         //     auto node = temp_queue.top();
@@ -365,38 +365,38 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
             
-            // 添加日志信息
-            std::stringstream ss;
-            ss << "JPS found path from (" << start.x << "," << start.y 
-               << ") to (" << goal.x << "," << goal.y << "):" << std::endl;
+            // // Add log information
+            // std::stringstream ss;
+            // ss << "JPS found path from (" << start.x << "," << start.y 
+            //    << ") to (" << goal.x << "," << goal.y << "):" << std::endl;
             
-            // 打印完整路径
-            ss << "Full path: ";
-            for (size_t i = 0; i < path.path.size(); ++i) {
-                ss << "(" << path.path[i].x << "," << path.path[i].y << ")";
-                if (i < path.path.size() - 1) ss << " -> ";
-            }
-            ss << std::endl;
+            // // Print complete path
+            // ss << "Full path: ";
+            // for (size_t i = 0; i < path.path.size(); ++i) {
+            //     ss << "(" << path.path[i].x << "," << path.path[i].y << ")";
+            //     if (i < path.path.size() - 1) ss << " -> ";
+            // }
+            // ss << std::endl;
             
-            // 打印跳点
-            ss << "Jump points: ";
-            for (size_t i = 0; i < path.jump_points.size(); ++i) {
-                ss << "(" << path.jump_points[i].x << "," << path.jump_points[i].y << ")";
-                if (i < path.jump_points.size() - 1) ss << " -> ";
-            }
-            ss << std::endl;
+            // // Print jump points
+            // ss << "Jump points: ";
+            // for (size_t i = 0; i < path.jump_points.size(); ++i) {
+            //     ss << "(" << path.jump_points[i].x << "," << path.jump_points[i].y << ")";
+            //     if (i < path.jump_points.size() - 1) ss << " -> ";
+            // }
+            // ss << std::endl;
             
-            //打印possible_intervals
-            logger::print_intervals(path.possible_intervals, "Possible intervals: ");
+            // // Print possible_intervals
+            // logger::print_intervals(path.possible_intervals, "Possible intervals: ");
             
-            logger::log_info(ss.str());
+            // logger::log_info(ss.str());
             
             return path;
         }
 
         // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," + 
-        //                std::to_string(current->pos.y) + "), g值: " + 
-        //                std::to_string(current->g) + ", h值: " + 
+        //                std::to_string(current->pos.y) + "), g-value: " + 
+        //                std::to_string(current->g) + ", h-value: " + 
         //                std::to_string(current->h));
         
         // identify_successors
@@ -410,14 +410,14 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
 
             auto next_node = std::make_shared<AStarNode>(
                 successor, 
-                tentative_g,  // 使用计算出的 tentative_g
+                tentative_g,  // Use calculated tentative_g
                 h_value,
                 current
             );
-            // logger::log_info("生成后继节点: (" + std::to_string(successor.x) + "," + 
-            //                std::to_string(successor.y) + "), g值: " + 
-            //                std::to_string(tentative_g) + ", 移动代价: " + 
-            //                std::to_string(move_cost) + ", h值: " + 
+            // logger::log_info("Generated successor node: (" + std::to_string(successor.x) + "," + 
+            //                std::to_string(successor.y) + "), g-value: " + 
+            //                std::to_string(tentative_g) + ", movement cost: " + 
+            //                std::to_string(move_cost) + ", h-value: " + 
             //                std::to_string(h_value));
             state.open_list.push(next_node);
         }

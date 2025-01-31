@@ -79,15 +79,16 @@ public:
     // Set timeout
     void set_time_limit(double seconds) { time_limit = seconds; }
 
+    int get_expanded_nodes() const { return expanded_nodes; }
+
 private:
     // Store all paths found for each agent
     std::unordered_map<int, std::vector<JPSPath>> solutions;
     std::unordered_map<int, JPSState> agent_states;
     std::vector<std::vector<int>> grid;
     
-    // Timeout related
-    std::chrono::steady_clock::time_point start_time;
     double time_limit = 0.1;
+    int expanded_nodes = 0;
     
     // Core functions
     JPSPath search_by_jps(const Agent& agent);
@@ -105,14 +106,10 @@ private:
                                   const Vertex& jp2, 
                                   const Vertex& next_jp);
     
-    bool is_timeout() const;
     int count_conflicts(const JPSCBSNode& node);
-
     void print_node_info(const JPSCBSNode& node, const std::string& prefix);
-
     std::vector<ConstraintInfo> collect_constraint_infos(const JPSCBSNode& node, 
                                                        const std::vector<Constraint>& constraints);
-
     std::shared_ptr<JPSCBSNode> initialize(const std::vector<Agent>& agents);
 };
 

@@ -39,11 +39,18 @@ public:
     std::vector<std::vector<Vertex>> solve(const std::vector<Agent>& agents, 
                                          const std::vector<std::vector<int>>& grid);
     void set_time_limit(double seconds) { time_limit = seconds; }
+    int get_expanded_nodes() const { return expanded_nodes; }
+    double get_runtime() const {
+        auto current_time = std::chrono::steady_clock::now();
+        return std::chrono::duration_cast<std::chrono::milliseconds>
+               (current_time - start_time).count() / 1000.0;
+    }
 
 private:
     bool use_bypass;
     double time_limit = 30.0;
     std::chrono::steady_clock::time_point start_time;
+    int expanded_nodes = 0;  // 添加计数器
     
     std::vector<Constraint> generate_constraints(const CBSNode& node);
     std::vector<Vertex> find_path(const Agent& agent,
