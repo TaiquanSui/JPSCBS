@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../../src/algorithm/astar/AStar.h"
+#include "../../../src/astar/AStar.h"
 
 class AStarTest : public ::testing::Test {
 protected:

@@ -27,28 +27,28 @@ enable_testing()
 
 # 收集源文件
 file(GLOB_RECURSE PROJECT_SOURCES 
-    "src/algorithm/*.cpp"
-    "src/algorithm/*.h"
-    "src/data_loader/*.cpp"
-    "src/data_loader/*.h"
-    "src/benchmark/*.cpp"
-    "src/benchmark/*.h"
+    "src/*.cpp"
+    "src/*.h"
+    "data_loader/*.cpp"
+    "data_loader/*.h"
+    "benchmark/*.cpp"
+    "benchmark/*.h"
 )
 
 # 创建库
 add_library(project_lib ${PROJECT_SOURCES})
-target_include_directories(project_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(project_lib PUBLIC ${CMAKE_SOURCE_DIR})
 
 # 添加测试目录
 add_subdirectory(test)
 
 # 基准测试程序
-add_executable(cbs_benchmark src/benchmark/CBSBenchmark.cpp)
+add_executable(cbs_benchmark benchmark/CBSBenchmark.cpp)
 target_link_libraries(cbs_benchmark PRIVATE project_lib)
 
-add_executable(jpscbs_benchmark src/benchmark/JPSCBSBenchmark.cpp)
+add_executable(jpscbs_benchmark benchmark/JPSCBSBenchmark.cpp)
 target_link_libraries(jpscbs_benchmark PRIVATE project_lib)
 
-add_executable(comparison_benchmark src/benchmark/Benchmark.cpp)
+add_executable(comparison_benchmark benchmark/Benchmark.cpp)
 target_link_libraries(comparison_benchmark PRIVATE project_lib)
 

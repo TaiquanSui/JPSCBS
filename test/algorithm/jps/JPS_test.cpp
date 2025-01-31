@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../../src/algorithm/jps/JPS.h"
+#include "../../../src/jps/JPS.h"
 
 class JPSTest : public ::testing::Test {
 protected:

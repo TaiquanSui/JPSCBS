@@ -7,6 +7,7 @@
 #include "../cbs/CBS.h"
 #include "../astar/Astar.h"
 #include "../utilities/Log.h"
+#include "../utilities/Utility.h"
 #include <unordered_map>
 #include <queue>
 #include <vector>
@@ -14,6 +15,8 @@
 #include <chrono>
 #include <iostream>
 #include <sstream>
+#include <atomic>
+#include "../../benchmark/ThreadSafeInterruptor.h"
 
 struct JPSCBSNode {
     // Multiple paths for each agent (sorted by cost)
@@ -73,6 +76,7 @@ struct ConstraintInfo {
 
 class JPSCBS {
 public:
+
     std::vector<std::vector<Vertex>> solve(const std::vector<Agent>& agents, 
                                          const std::vector<std::vector<int>>& grid);
 
@@ -81,14 +85,24 @@ public:
 
     int get_expanded_nodes() const { return expanded_nodes; }
 
+    void set_interruptor(ThreadSafeInterruptor* interruptor) {
+        this->interruptor = interruptor;
+    }
+
+    bool should_terminate() const {
+        return (interruptor && interruptor->is_interrupted());
+    }
+
 private:
     // Store all paths found for each agent
     std::unordered_map<int, std::vector<JPSPath>> solutions;
     std::unordered_map<int, JPSState> agent_states;
     std::vector<std::vector<int>> grid;
     
-    double time_limit = 0.1;
+    double time_limit = 30.0;
     int expanded_nodes = 0;
+    
+    ThreadSafeInterruptor* interruptor = nullptr;
     
     // Core functions
     JPSPath search_by_jps(const Agent& agent);

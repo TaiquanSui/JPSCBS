@@ -1,6 +1,6 @@
 #pragma once
-#include "../algorithm/Vertex.h"
-#include "../algorithm/Agent.h"
+#include "../src/Vertex.h"
+#include "../src/Agent.h"
 #include <vector>
 #include <string>
 

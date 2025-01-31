@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include "../../../src/algorithm/jpscbs/JPSCBS.h"
-#include "../../../src/algorithm/utilities/Utility.h"
-#include "../../../src/algorithm/utilities/Log.h"
+#include "../../../src/jpscbs/JPSCBS.h"
+#include "../../../src/utilities/Utility.h"
+#include "../../../src/utilities/Log.h"
 #include <sstream>
 #include <chrono>
 

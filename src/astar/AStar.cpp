@@ -42,34 +42,34 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
         }
 
         for (const auto& move : Action::MOVEMENTS_9) {
-            Vertex neighbor(current->pos.x + move.x, current->pos.y + move.y);
+            Vertex next_pos(current->pos.x + move.x, current->pos.y + move.y);
 
-            if (!utils::isWalkable(grid, neighbor)) {
+            if (!utils::isWalkable(grid, next_pos)) {
                 continue;
             }
 
             double tentative_g;
-            if (utils::isDiagonal(neighbor - current->pos)) {
+            if (utils::isDiagonal(next_pos - current->pos)) {
                 tentative_g = current->g + std::sqrt(2.0);
             } else {
                 tentative_g = current->g + 1.0;
             }
 
-            if (closed_list.count(neighbor) && closed_list[neighbor] <= tentative_g) {
+            if (closed_list.count(next_pos) && closed_list[next_pos] <= tentative_g) {
                 continue;
             }
 
-            closed_list[neighbor] = tentative_g;
+            closed_list[next_pos] = tentative_g;
 
-            auto neighbor_node = std::make_shared<AStarNode>(
-                neighbor, tentative_g, heuristic(neighbor, goal), current);
+            auto next_node = std::make_shared<AStarNode>(
+                next_pos, tentative_g, heuristic(next_pos, goal), current);
             
             // logger::log_info("Generated successor node: (" + std::to_string(neighbor.x) + "," +
             //                std::to_string(neighbor.y) + "), g-value: " +
             //                std::to_string(tentative_g) +
             //                ", h-value: " + std::to_string(heuristic(neighbor, goal)));
             
-            open_list.push(neighbor_node);
+            open_list.push(next_node);
         }
     }
 

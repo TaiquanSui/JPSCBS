@@ -1,12 +1,12 @@
 #ifndef BENCHMARK_UTILS_H
 #define BENCHMARK_UTILS_H
 
-#include "../algorithm/Agent.h"
+#include "../src/Agent.h"
 #include "../data_loader/MapLoader.h"
-#include "../algorithm/utilities/Utility.h"
-#include "../algorithm/utilities/Log.h"
-#include "../algorithm/cbs/CBS.h"
-#include "../algorithm/jpscbs/JPSCBS.h"
+#include "../src/utilities/Utility.h"
+#include "../src/utilities/Log.h"
+#include "../src/cbs/CBS.h"
+#include "../src/jpscbs/JPSCBS.h"
 #include <chrono>
 #include <iostream>
 #include <iomanip>

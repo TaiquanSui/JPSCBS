@@ -3,7 +3,14 @@
 std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents, 
                                               const std::vector<std::vector<int>>& grid) {
     logger::log_info("Starting JPSCBS solver");
+    
     this->grid = grid;
+    this->solutions.clear();        // 清空之前的解决方案
+    this->agent_states.clear();     // 清空之前的智能体状态
+    expanded_nodes = 0;             // 重置节点计数器
+    
+    // 记录开始时间
+    auto start_time = std::chrono::steady_clock::now();
     
     // Initialize root node and solutions
     auto root = initialize(agents);
@@ -18,12 +25,21 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
                        JPSCBSNodeComparator> open_list;
     open_list.push(root);
     
-    expanded_nodes = 0;  // 重置计数器
-    
     while (!open_list.empty()) {
+        // 只检查是否应该终止
+        if (should_terminate()) {
+            logger::log_info("JPSCBS solver interrupted");
+            return {};
+        }
+
         auto current = open_list.top();
+        if (!current) {
+            logger::log_error("遇到空节点，跳过处理");
+            open_list.pop();
+            continue;
+        }
         open_list.pop();
-        expanded_nodes++;  // 增加计数器
+        expanded_nodes++;
         
         print_node_info(*current, "Current Node");
         
@@ -98,6 +114,11 @@ std::shared_ptr<JPSCBSNode> JPSCBS::initialize(const std::vector<Agent>& agents)
 
 void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node) {
     for (auto& [agent_id, agent_paths] : node.solution) {
+        // 检查 agent_states 中是否存在该智能体
+        if (agent_states.find(agent_id) == agent_states.end()) {
+            logger::log_warning("can't find agent " + std::to_string(agent_id) + " state");
+            continue;
+        }
         // 如果该智能体的open_list为空，说明无法找到更多路径，跳过更新
         if (agent_states[agent_id].open_list.empty()) {
             continue;
@@ -163,6 +184,11 @@ void JPSCBS::validate_and_repair_solutions(const std::vector<Agent>& agents, JPS
     logger::log_info("Starting to validate and repair paths");
 
     for (const auto& agent : agents) {
+        if (node.solution.find(agent.id) == node.solution.end()) {
+            logger::log_error("can't find agent " + std::to_string(agent.id) + " solution");
+            continue;
+        }
+        
         auto& agent_paths = node.solution[agent.id];
         
         // 如果没有可用路径，直接返回失败
@@ -363,6 +389,24 @@ bool JPSCBS::find_alt_symmetric_paths(JPSCBSNode& node,
 }
 
 void JPSCBS::resolve_conflict_locally(JPSCBSNode& node, const ConstraintInfo& info) {
+    if (node.solution.find(info.constraint.agent) == node.solution.end()) {
+        logger::log_error("找不到智能体 " + std::to_string(info.constraint.agent) + " 的解决方案");
+        return;
+    }
+
+    auto& agent_paths = node.solution[info.constraint.agent];
+    if (agent_paths.empty()) {
+        logger::log_error("智能体 " + std::to_string(info.constraint.agent) + " 没有可用路径");
+        return;
+    }
+
+    auto current_path = agent_paths.top();
+    if (info.jp1_path_index >= current_path.path.size() || 
+        info.jp2_path_index >= current_path.path.size()) {
+        logger::log_error("路径索引超出范围");
+        return;
+    }
+
     // First try to find a path within the current interval
     logger::log_info("Local conflict resolution");
     logger::log_info("agent_id: " + std::to_string(info.constraint.agent));
@@ -371,7 +415,6 @@ void JPSCBS::resolve_conflict_locally(JPSCBSNode& node, const ConstraintInfo& in
     logger::log_info("start_time: " + std::to_string(info.jp1_path_index));
     logger::log_info("end_time: " + std::to_string(info.jp2_path_index));
     logger::print_constraints(node.constraints, "Constraints");
-    auto current_path = node.solution[info.constraint.agent].top();
     auto& path = current_path.path;
     
     // 使用索引获取对应的迭代器
@@ -464,7 +507,22 @@ bool JPSCBS::has_better_solution(const std::vector<Vertex>& new_path,
 void JPSCBS::update_path_with_local_solution(JPSCBSNode& node, 
                                              const ConstraintInfo& info, 
                                              const std::vector<Vertex>& local_path) {
+    if (local_path.empty()) {
+        logger::log_error("local path is empty");
+        return;
+    }
+
+    if (node.solution.find(info.constraint.agent) == node.solution.end()) {
+        logger::log_error("can't find agent " + std::to_string(info.constraint.agent) + " solution");
+        return;
+    }
+
     auto& agent_paths = node.solution[info.constraint.agent];
+    if (agent_paths.empty()) {
+        logger::log_error("agent path queue is empty");
+        return;
+    }
+
     auto current_path = agent_paths.top();
     agent_paths.pop();
     
@@ -568,11 +626,19 @@ int JPSCBS::count_conflicts(const JPSCBSNode& node) {
     int total_conflicts = 0;
     const auto& solution = node.solution;
     
-    // 检查每对智能体之间的冲突
     for (auto it1 = solution.begin(); it1 != solution.end(); ++it1) {
+        if (it1->second.empty()) {
+            logger::log_warning("agent " + std::to_string(it1->first) + " has no path");
+            continue;
+        }
+        
         auto it2 = it1;
         ++it2;
         for (; it2 != solution.end(); ++it2) {
+            if (it2->second.empty()) {
+                logger::log_warning("agent " + std::to_string(it2->first) + " has no path");
+                continue;
+            }
             total_conflicts += utils::count_conflicts(
                 it1->first,  // agent1_id
                 it2->first,  // agent2_id

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "../../../src/algorithm/cbs/CBS.h"
-#include "../../../src/algorithm/utilities/Utility.h"
+#include "../../../src/cbs/CBS.h"
+#include "../../../src/utilities/Utility.h"
 #include <chrono>
 
 class CBSTest : public ::testing::Test {

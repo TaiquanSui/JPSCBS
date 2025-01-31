@@ -11,7 +11,9 @@
 
 std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
                                           const std::vector<std::vector<int>>& grid) {
+    expanded_nodes = 0;             
     start_time = std::chrono::steady_clock::now();
+    
     logger::log_info("Starting CBS solver");
     
     CBSNode root;
@@ -33,12 +35,10 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
 
     // print_node_info(root, "Initial Node");
 
-    expanded_nodes = 0;  // 重置计数器
-
     while (!open_list.empty()) {
-        if (is_timeout()) {
-            logger::log_warning("Time limit exceeded");
-            return {};  // 确保在超时后返回空结果
+        if (should_terminate()) {
+            logger::log_info("CBS solver interrupted");
+            return {};
         }
         
         auto current = open_list.top();
@@ -55,7 +55,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
                 result.push_back(current.solution[agent.id]);
             }
             
-            print_node_info(current, "Solution Found");
+            // print_node_info(current, "Solution Found");
             
             return result;
         }

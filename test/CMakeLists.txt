@@ -1,6 +1,9 @@
 # Collect test source files
 file(GLOB_RECURSE TEST_SOURCES 
-    "algorithm/*_test.cpp"
+    "algorithm/astar/*_test.cpp"
+    "algorithm/cbs/*_test.cpp"
+    "algorithm/jps/*_test.cpp"
+    "algorithm/jpscbs/*_test.cpp"
 )
 
 # Create test executable
@@ -19,5 +22,5 @@ target_link_libraries(algorithm_tests
 include(GoogleTest)
 gtest_discover_tests(algorithm_tests
     PROPERTIES
-    TIMEOUT 60  # Set test timeout to 10 seconds
+    TIMEOUT 60  # Set test timeout to 60 seconds
 ) 
