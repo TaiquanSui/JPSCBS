@@ -290,7 +290,7 @@ std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
     }
     
     logger::log_info("No new constraints found");
-    return {};
+    return constraints;
 }
 
 bool JPSCBS::find_alt_symmetric_paths(JPSCBSNode& node, 

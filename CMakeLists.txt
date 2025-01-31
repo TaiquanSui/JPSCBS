@@ -35,8 +35,15 @@ file(GLOB_RECURSE PROJECT_SOURCES
     "benchmark/*.h"
 )
 
+# 只排除具体的benchmark可执行文件源文件
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/CBSBenchmark\\.cpp$")
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/JPSCBSBenchmark\\.cpp$")
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/Benchmark\\.cpp$")
+
 # 创建库
-add_library(project_lib ${PROJECT_SOURCES})
+add_library(project_lib ${PROJECT_SOURCES}
+        src/cbs/ConstraintTable.cpp
+        src/cbs/ConstraintTable.h)
 target_include_directories(project_lib PUBLIC ${CMAKE_SOURCE_DIR})
 
 # 添加测试目录

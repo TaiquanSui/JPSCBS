@@ -142,12 +142,12 @@ BenchmarkResult BenchmarkUtils::run_scen_file(
             // path_log << "----------------------------------------\n";
 
             bool success = !timeout && !solution.empty();
-            int total_cost = 0;
+            double total_cost = 0.0;
             int nodes_expanded = 0;
 
             if (success) {
-                total_cost = std::accumulate(solution.begin(), solution.end(), 0,
-                    [](int sum, const auto& path) { 
+                total_cost = std::accumulate(solution.begin(), solution.end(), 0.0,
+                    [](double sum, const auto& path) { 
                         return sum + utils::calculate_path_cost(path); 
                     });
                 if (auto* cbs = dynamic_cast<CBS*>(solver.target<CBS>())) {
@@ -342,15 +342,15 @@ void BenchmarkUtils::write_results_to_csv(
     
     // 获取项目根目录
     std::string root_dir = get_project_root();
-    fs::path data_dir = fs::path(root_dir) / "data" / "benchmark_results";
+    fs::path results_dir = fs::path(root_dir) / "benchmark_results";
     
     // 确保目录存在
-    if (!fs::exists(data_dir)) {
-        fs::create_directories(data_dir);
+    if (!fs::exists(results_dir)) {
+        fs::create_directories(results_dir);
     }
     
     // 构建完整的文件路径
-    fs::path file_path = data_dir / filename;
+    fs::path file_path = results_dir / filename;
     std::ofstream file(file_path);
     if (!file.is_open()) {
         throw std::runtime_error("Unable to create CSV file: " + file_path.string());
@@ -376,15 +376,15 @@ void BenchmarkUtils::write_comparison_results_to_csv(
     
     // 获取项目根目录
     std::string root_dir = get_project_root();
-    fs::path data_dir = fs::path(root_dir) / "data" / "benchmark_results";
+    fs::path results_dir = fs::path(root_dir) / "benchmark_results";
     
     // 确保目录存在
-    if (!fs::exists(data_dir)) {
-        fs::create_directories(data_dir);
+    if (!fs::exists(results_dir)) {
+        fs::create_directories(results_dir);
     }
     
     // 构建完整的文件路径
-    fs::path file_path = data_dir / filename;
+    fs::path file_path = results_dir / filename;
     std::ofstream file(file_path);
     if (!file.is_open()) {
         throw std::runtime_error("Unable to create CSV file: " + file_path.string());

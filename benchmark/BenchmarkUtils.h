@@ -42,7 +42,7 @@ using InterruptFunction = std::function<void()>;
 struct BenchmarkResult {
     bool success;
     double runtime;
-    int total_cost;
+    double total_cost;
     size_t num_agents;
     int nodes_expanded;
     std::string map_name;

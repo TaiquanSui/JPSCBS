@@ -62,7 +62,7 @@ namespace utils {
     }
 
     inline bool isStraight(const Vertex& dir) {
-        return dir.x == 0 || dir.y == 0;
+        return (dir.x == 0 && dir.y != 0) || (dir.x != 0 && dir.y == 0);
     }
 
     inline bool validatePath(const std::vector<Vertex>& path, 
@@ -123,7 +123,7 @@ namespace utils {
     }
 
     inline bool is_valid_move(const std::vector<Constraint>& constraints, 
-                      int agent_id, const Vertex& pos, int time) {
+                      const int agent_id, const Vertex& pos, const int time) {
         for (const auto& constraint : constraints) {
             if (constraint.agent == agent_id && 
                 constraint.vertex == pos && 
