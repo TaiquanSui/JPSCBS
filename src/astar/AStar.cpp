@@ -25,7 +25,8 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 
                        AStarNodeComparator> open_list;
-    std::unordered_map<Vertex, double, VertexHash> closed_list;
+    std::unordered_map<Vertex, double> closed_list;
+
 
     auto start_node = std::make_shared<AStarNode>(start, 0, heuristic(start, goal));
     open_list.push(start_node);
@@ -86,7 +87,8 @@ std::vector<Vertex> a_star(int agent_id,
                           const Vertex& goal,
                           const std::vector<std::vector<int>>& grid,
                           const std::vector<Constraint>& constraints,
-                          int start_time) {
+                          int start_time,
+                          const ConflictAvoidanceTable& cat) {
 
     if(!utils::isWalkable(grid, start) || !utils::isWalkable(grid, goal)) {
         return {};
@@ -161,8 +163,9 @@ std::vector<Vertex> a_star(int agent_id,
             
             closed_list[state_key] = tentative_g;
             
+            int conflicts = cat.getConflictCount(next_pos, next_time);
             auto next_node = std::make_shared<AStarNode>(
-                next_pos, tentative_g, heuristic(next_pos, goal), current, next_time);
+                next_pos, tentative_g, heuristic(next_pos, goal), current, next_time, conflicts);
 
             // logger::log_info("Generated successor node: (" + std::to_string(next_pos.x) + "," +
             //                std::to_string(next_pos.y) + "), g-value: " +

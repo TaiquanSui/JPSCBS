@@ -2,11 +2,13 @@
 #include "../astar/AStar.h"
 #include "../utilities/Log.h"
 #include "../utilities/Utility.h"
+#include "ConflictAvoidanceTable.h"
 #include <queue>
 #include <algorithm>
 #include <chrono>
 #include <sstream>
 #include <iomanip>
+
 #include <ranges>
 
 std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
@@ -81,7 +83,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
             Agent affected_agent = *std::find_if(agents.begin(), agents.end(),
             [&](const Agent& a) { return a.id == constraint.agent; });
             
-            auto new_path = find_path(affected_agent, grid, child.constraints);
+            auto new_path = find_path(affected_agent, grid, child);
             
             if (!new_path.empty()) {
                 child.solution[constraint.agent] = new_path;
@@ -155,15 +157,37 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
     return {};
 }
 
-std::vector<Vertex> CBS::find_path(const Agent& agent,
-                                 const std::vector<std::vector<int>>& grid,
-                                 const std::vector<Constraint>& constraints) {
-    // logger::print_constraints(constraints, 
-    //     "Finding path for agent " + std::to_string(agent.id) + ", current constraints:");
-    return a_star(agent.id, agent.start, agent.goal, grid, constraints);
+ConflictAvoidanceTable CBS::calculate_cat(const std::unordered_set<int>& excluded_agents, 
+                                        const CBSNode& node) const {
+    ConflictAvoidanceTable cat;
+    
+    // 计算其他智能体的路径占用情况
+    for (const auto& [agent_id, path] : node.solution) {
+        if (excluded_agents.count(agent_id) > 0) continue;  // 跳过被排除的智能体
+        
+        // 对路径中的每个位置添加约束
+        for (size_t t = 0; t < path.size(); ++t) {
+            cat.addConstraint(path[t], t);
+            
+            // 如果是路径的最后一个位置，添加终点约束
+            if (t == path.size() - 1) {
+                cat.addGoalConstraint(path[t], t);
+            }
+        }
+    }
+    
+    return cat;
 }
 
-            
+std::vector<Vertex> CBS::find_path(const Agent& agent,
+                                 const std::vector<std::vector<int>>& grid,
+                                 const CBSNode& node) {
+    std::unordered_set<int> excluded_agents = {agent.id};
+    ConflictAvoidanceTable cat = calculate_cat(excluded_agents, node);
+    return a_star(agent.id, agent.start, agent.goal, grid, node.constraints, 0, cat);
+}
+
+
 bool CBS::find_bypass(CBSNode& node, const std::vector<Agent>& agents, 
                      const std::vector<Constraint>& constraints,
                      const std::vector<std::vector<int>>& grid) {
@@ -183,8 +207,9 @@ bool CBS::find_bypass(CBSNode& node, const std::vector<Agent>& agents,
         std::vector<Constraint> temp_constraints = node.constraints;
         temp_constraints.emplace_back(affected_agent.id, constraint.vertex, constraint.time);
         
+        ConflictAvoidanceTable cat = calculate_cat({affected_agent.id}, node);
         auto path = a_star(affected_agent.id, affected_agent.start, affected_agent.goal, 
-                          grid, temp_constraints);
+                          grid, temp_constraints, 0, cat);
         // logger::print_constraints(temp_constraints, "Bypass Path Constraints");
         
         // // Original path

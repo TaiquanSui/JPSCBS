@@ -21,10 +21,14 @@ struct Vertex {
     }
 };
 
-struct VertexHash {
-    size_t operator()(const Vertex& p) const {
-        return std::hash<int>()(p.x) ^ std::hash<int>()(p.y);
-    }
-};
+// 为 std::hash 提供特化
+namespace std {
+    template<>
+    struct hash<Vertex> {
+        size_t operator()(const Vertex& v) const {
+            return hash<int>()(v.x) ^ (hash<int>()(v.y) << 1);
+        }
+    };
+}
 
 #endif //VERTEX_H

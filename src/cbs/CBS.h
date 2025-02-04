@@ -3,10 +3,13 @@
 
 #include "../Vertex.h"
 #include "../Agent.h"
+#include "ConflictAvoidanceTable.h"
 #include <vector>
 #include <unordered_map>
 #include <chrono>
 #include <atomic>
+#include <unordered_set>
+
 
 struct Conflict {
     int agent1;
@@ -57,11 +60,11 @@ private:
     std::chrono::steady_clock::time_point start_time;
     int expanded_nodes = 0;
     std::atomic<bool> interrupted{false};  // 内部中断状态
-    
+            
     std::vector<Constraint> generate_constraints(const CBSNode& node);
     std::vector<Vertex> find_path(const Agent& agent,
                                 const std::vector<std::vector<int>>& grid,
-                                const std::vector<Constraint>& constraints);
+                                const CBSNode& node);
     bool find_bypass(CBSNode& node, const std::vector<Agent>& agents, 
                      const std::vector<Constraint>& constraints,
                      const std::vector<std::vector<int>>& grid);
@@ -72,6 +75,9 @@ private:
     // 计算单条路径的代价
     double calculate_sic(const CBSNode& node);
     int count_conflicts(const CBSNode& node);
+
+    ConflictAvoidanceTable calculate_cat(const std::unordered_set<int>& excluded_agents, 
+                                       const CBSNode& node) const;
 };
 
 #endif // CBS_H

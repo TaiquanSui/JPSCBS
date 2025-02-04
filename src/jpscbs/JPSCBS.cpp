@@ -326,8 +326,7 @@ bool JPSCBS::find_alt_symmetric_paths(JPSCBSNode& node,
         logger::print_constraints(temp_constraints, "Temporary constraints");
 
         auto alt_path = a_star(info.constraint.agent, info.jp1, info.jp2,
-                             grid, temp_constraints, 
-                             info.jp1_path_index);
+                             grid, temp_constraints, info.jp1_path_index);
 
         if (!alt_path.empty()) {
             logger::log_info("Found bypass path: " + logger::vectorToString(alt_path));
