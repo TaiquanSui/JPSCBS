@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include <chrono>
 #include <atomic>
-#include "../../benchmark/ThreadSafeInterruptor.h"
 
 struct Conflict {
     int agent1;
@@ -48,20 +47,16 @@ public:
                (current_time - start_time).count() / 1000.0;
     }
 
-    void set_interruptor(ThreadSafeInterruptor* interruptor) {
-        this->interruptor = interruptor;
-    }
-    
-    bool should_terminate() const {
-        return (interruptor && interruptor->is_interrupted()) || is_timeout();
-    }
+    void interrupt() { interrupted = true; }
+    void reset_interrupt() { interrupted = false; }
+    bool should_terminate() const { return interrupted || is_timeout(); }
 
 private:
     bool use_bypass;
     double time_limit = 30.0;
     std::chrono::steady_clock::time_point start_time;
-    int expanded_nodes = 0;  // 添加计数器
-    ThreadSafeInterruptor* interruptor = nullptr;
+    int expanded_nodes = 0;
+    std::atomic<bool> interrupted{false};  // 内部中断状态
     
     std::vector<Constraint> generate_constraints(const CBSNode& node);
     std::vector<Vertex> find_path(const Agent& agent,

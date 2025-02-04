@@ -16,11 +16,11 @@
 struct AStarNode {
     Vertex pos;
     double g;
-    int h;
+    double h;
     std::shared_ptr<AStarNode> parent;
     int time;
 
-    AStarNode(Vertex p, double g, int h, std::shared_ptr<AStarNode> parent = nullptr, int t = 0)
+    AStarNode(Vertex p, double g, double h, std::shared_ptr<AStarNode> parent = nullptr, int t = 0)
         : pos(p), g(g), h(h), parent(std::move(parent)), time(t) {}
 
     double f() const { return g + h; }

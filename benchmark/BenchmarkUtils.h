@@ -20,7 +20,8 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
-#include "ThreadSafeInterruptor.h"
+#include <set>
+#include <map>
 
 #ifdef __linux__
     #include <pthread.h>
@@ -33,7 +34,8 @@
 namespace fs = std::filesystem;
 
 using SolverFunction = std::function<std::vector<std::vector<Vertex>>(
-    const std::vector<Agent>&, 
+    CBS* solver,
+    const std::vector<Agent>&,
     const std::vector<std::vector<int>>&
 )>;
 
@@ -52,33 +54,34 @@ struct BenchmarkResult {
 struct BenchmarkStats {
     int total_instances;
     int successful_instances;
-    double avg_runtime;
-    double avg_nodes_expanded;
-    double success_rate;
+    std::map<size_t, double> success_rates;    // agent数量 -> 成功率
+    std::map<size_t, double> avg_runtimes;     // agent数量 -> 平均运行时间
+    std::map<size_t, double> avg_nodes;        // agent数量 -> 平均展开节点数
     
     void print() const;
 };
 
 class BenchmarkUtils {
 public:
-    static void set_thread_affinity(int cpu_id);
-
-    static void benchmark_all_scenarios(SolverFunction solver, InterruptFunction interrupter);
-    static void benchmark_all_scenarios_comparison(SolverFunction solver1, InterruptFunction interrupter1, SolverFunction solver2, InterruptFunction interrupter2); 
+    static void benchmark_all_scenarios(CBS* solver);
+    static void benchmark_all_scenarios(JPSCBS* solver);
     
-    static BenchmarkResult run_scen_file(
+    static void benchmark_all_scenarios_comparison(
+        CBS* solver1,
+        JPSCBS* solver2);
+
+private:
+    template<typename Solver>
+    static std::vector<BenchmarkResult> run_scen_file_impl(
         const std::string& map_file,
         const std::string& scen_file,
-        SolverFunction solver,
-        InterruptFunction interrupter,
-        double time_limit = 30.0);                                              
-                           
-    static std::vector<BenchmarkResult> run_all_scenarios(
-        SolverFunction solver,
-        InterruptFunction interrupter);
+        Solver* solver,
+        double time_limit = 30.0);
 
+    template<typename Solver>
+    static std::vector<BenchmarkResult> run_all_scenarios_impl(Solver* solver);
 
-    //辅助函数
+    // 辅助函数
     static std::string get_project_root();
     static std::string get_map_name(const std::string& map_path);
     static std::string make_scen_path(const std::string& scen_dir, 
@@ -98,7 +101,11 @@ public:
     static void write_comparison_results_to_csv(const std::string& filename,
                                               const std::vector<BenchmarkResult>& cbs_results,
                                               const std::vector<BenchmarkResult>& jpscbs_results);
-                                              
+
+    // 创建CSV文件并返回文件流
+    static std::ofstream create_csv_file(const std::string& filename);
+
+    static void set_thread_affinity(int cpu_id);
 };
 
 #endif // BENCHMARK_UTILS_H

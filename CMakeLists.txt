@@ -41,9 +41,7 @@ list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/JPSCBSBenchmark\\.cpp$")
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/Benchmark\\.cpp$")
 
 # 创建库
-add_library(project_lib ${PROJECT_SOURCES}
-        src/cbs/ConstraintTable.cpp
-        src/cbs/ConstraintTable.h)
+add_library(project_lib ${PROJECT_SOURCES})
 target_include_directories(project_lib PUBLIC ${CMAKE_SOURCE_DIR})
 
 # 添加测试目录

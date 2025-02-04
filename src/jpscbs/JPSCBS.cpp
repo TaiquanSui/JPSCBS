@@ -8,6 +8,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
     this->solutions.clear();        // 清空之前的解决方案
     this->agent_states.clear();     // 清空之前的智能体状态
     expanded_nodes = 0;             // 重置节点计数器
+    interrupted = false;            // 重置中断状态
     
     // 记录开始时间
     auto start_time = std::chrono::steady_clock::now();
@@ -26,11 +27,6 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
     open_list.push(root);
     
     while (!open_list.empty()) {
-        // 只检查是否应该终止
-        if (should_terminate()) {
-            logger::log_info("JPSCBS solver interrupted");
-            return {};
-        }
 
         auto current = open_list.top();
         if (!current) {
@@ -43,11 +39,13 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         
         print_node_info(*current, "Current Node");
         
-        // Update current node's solution
-        update_solutions(agents, *current);
-        
-        // 验证和修复所有路径
-        validate_and_repair_solutions(agents, *current);
+        if(expanded_nodes > 1) {
+            // Update current node's solution
+            update_solutions(agents, *current);
+
+            // 验证和修复所有路径
+            validate_and_repair_solutions(agents, *current);
+        }
         
         // 获取所有相关约束
         auto new_constraints = generate_constraints(*current);
@@ -61,6 +59,12 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
                 final_paths.push_back(current->solution[agent.id].top().path);
             }
             return final_paths;
+        }
+
+        // 只检查是否应该终止
+        if (should_terminate()) {
+            logger::log_info("JPSCBS solver interrupted");
+            return {};
         }
 
         auto constraint_infos = collect_constraint_infos(*current, new_constraints);
@@ -259,7 +263,7 @@ std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
                 if (pos1 == pos2) {
                     constraints.emplace_back(agent1, pos1, i);  
                     constraints.emplace_back(agent2, pos2, i);
-                    continue;
+                    return constraints;
                 }
 
                 if (i < t - 1) {
@@ -270,7 +274,7 @@ std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
                     if (pos1 == next_pos2 && pos2 == next_pos1) {
                         constraints.emplace_back(agent1, pos1, i);
                         constraints.emplace_back(agent2, pos2, i);
-                        continue;
+                        return constraints;
                     }
 
                     // check following conflict
@@ -290,7 +294,7 @@ std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
     }
     
     logger::log_info("No new constraints found");
-    return constraints;
+    return {};
 }
 
 bool JPSCBS::find_alt_symmetric_paths(JPSCBSNode& node, 

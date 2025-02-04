@@ -13,6 +13,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
                                           const std::vector<std::vector<int>>& grid) {
     expanded_nodes = 0;             
     start_time = std::chrono::steady_clock::now();
+    interrupted = false;  // 重置中断状态
     
     logger::log_info("Starting CBS solver");
     
@@ -36,10 +37,6 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
     // print_node_info(root, "Initial Node");
 
     while (!open_list.empty()) {
-        if (should_terminate()) {
-            logger::log_info("CBS solver interrupted");
-            return {};
-        }
         
         auto current = open_list.top();
         open_list.pop();
@@ -58,6 +55,11 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
             // print_node_info(current, "Solution Found");
             
             return result;
+        }
+
+        if (should_terminate()) {
+            logger::log_info("CBS solver interrupted");
+            return {};
         }
 
         // Try to find bypass solutions for all agents
@@ -119,7 +121,7 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
                 if (pos1 == pos2) {
                     constraints.emplace_back(agent1, pos1, i);  
                     constraints.emplace_back(agent2, pos2, i);
-                    continue;
+                    return constraints;
                 }
 
                 if (i < t - 1) {
@@ -130,7 +132,7 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
                     if (pos1 == next_pos2 && pos2 == next_pos1) {
                         constraints.emplace_back(agent1, pos1, i);
                         constraints.emplace_back(agent2, pos2, i);
-                        continue;
+                        return constraints;
                     }
 
                     // check following conflict
@@ -149,6 +151,7 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
         }
     }
 
+    logger::log_info("No conflicts found");
     return {};
 }
 

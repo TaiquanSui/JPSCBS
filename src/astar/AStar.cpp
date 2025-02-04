@@ -18,6 +18,10 @@ namespace {
 
 std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
                           const std::vector<std::vector<int>>& grid) {
+
+    if(!utils::isWalkable(grid, start) || !utils::isWalkable(grid, goal)) {
+        return {};
+    }
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 
                        AStarNodeComparator> open_list;
@@ -83,7 +87,13 @@ std::vector<Vertex> a_star(int agent_id,
                           const std::vector<std::vector<int>>& grid,
                           const std::vector<Constraint>& constraints,
                           int start_time) {
+
+    if(!utils::isWalkable(grid, start) || !utils::isWalkable(grid, goal)) {
+        return {};
+    }
+
     const int MAX_TIME = 100000;  // 设置一个合理的最大时间限制
+
     
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 

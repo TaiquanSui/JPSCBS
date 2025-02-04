@@ -8,4 +8,4 @@
 std::vector<std::vector<int>> load_map(const std::string& filename);
 
 // Load scenario, return agent list
-std::vector<Agent> load_scen(const std::string& filename);
+std::vector<Agent> load_scen(const std::string& filename, const std::vector<std::vector<int>>& grid);

@@ -1,4 +1,6 @@
 #include "MapLoader.h"
+#include "../src/astar/AStar.h"
+#include "../src/utilities/Log.h"
 #include <fstream>
 #include <sstream>
 
@@ -35,45 +37,51 @@ std::vector<std::vector<int>> load_map(const std::string& filename) {
     // 读取地图内容
     std::vector<std::vector<int>> map(height, std::vector<int>(width, 0));
     int row = 0;
-    while (std::getline(file, line) && row < height) {
-        if (line.empty()) continue;
-        if (line.length() < width) {
-            throw std::runtime_error("地图行长度不足");
+    int col = 0;
+    char c;
+    
+    // 逐字符读取地图内容
+    while (file.get(c) && row < height) {
+        // 跳过换行符和回车符
+        if (c == '\n' || c == '\r') {
+            continue;
         }
         
-        for (int col = 0; col < width; ++col) {
-            char c = line[col];
-            // 0表示可通行(. 或 G), 1表示不可通行(T, @, O)
-            // 注意：目前将S(沼泽)和W(水)视为可通行，但后续可能需要特殊处理
-            switch(c) {
-                case '.':
-                case 'G':
-                    map[row][col] = 0;  // 可通行
-                    break;
-                case '@':
-                case 'O':
-                case 'T':
-                    map[row][col] = 1;  // 不可通行
-                    break;
-                case 'S':
-                case 'W':
-                    map[row][col] = 0;  // 暂时视为可通行
-                    break;
-                default:
-                    throw std::runtime_error("地图包含未知字符: " + std::string(1, c));
-            }
+        // 处理当前字符
+        switch(c) {
+            case '.':
+            case 'G':
+                map[row][col] = 0;  // 可通行
+                break;
+            case '@':
+            case 'O':
+            case 'T':
+                map[row][col] = 1;  // 不可通行
+                break;
+            case 'S':
+            case 'W':
+                map[row][col] = 0;  // 暂时视为可通行
+                break;
+            default:
+                throw std::runtime_error("地图包含未知字符: " + std::string(1, c));
         }
-        ++row;
+        
+        // 更新位置
+        ++col;
+        if (col >= width) {
+            col = 0;
+            ++row;
+        }
     }
 
     if (row != height) {
-        throw std::runtime_error("地图行数不足");
+        throw std::runtime_error("地图数据不足");
     }
 
     return map;
 }
 
-std::vector<Agent> load_scen(const std::string& filename) {
+std::vector<Agent> load_scen(const std::string& filename, const std::vector<std::vector<int>>& grid) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("无法打开场景文件: " + filename);
@@ -101,12 +109,24 @@ std::vector<Agent> load_scen(const std::string& filename) {
             continue;  // 跳过无效行
         }
 
-        // 创建新的Agent
-        agents.emplace_back(
-            agent_id++,
-            Vertex(start_x, start_y),
-            Vertex(goal_x, goal_y)
-        );
+        // 先验证起点到终点是否可达
+        Vertex start(start_x, start_y);
+        Vertex goal(goal_x, goal_y);
+        
+        auto path = a_star(start, goal, grid);
+        if (!path.empty()) {
+            // 只有在找到可行路径的情况下才添加agent
+            agents.emplace_back(
+                agent_id++,
+                start,
+                goal
+            );
+        } else {
+            // logger::log_info("跳过不可达的场景: 起点(" +
+            //                std::to_string(start_x) + "," + std::to_string(start_y) +
+            //                ") 终点(" + std::to_string(goal_x) + "," +
+            //                std::to_string(goal_y) + ")");
+        }
     }
 
     return agents;

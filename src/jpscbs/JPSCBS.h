@@ -16,7 +16,6 @@
 #include <iostream>
 #include <sstream>
 #include <atomic>
-#include "../../benchmark/ThreadSafeInterruptor.h"
 
 struct JPSCBSNode {
     // Multiple paths for each agent (sorted by cost)
@@ -85,13 +84,9 @@ public:
 
     int get_expanded_nodes() const { return expanded_nodes; }
 
-    void set_interruptor(ThreadSafeInterruptor* interruptor) {
-        this->interruptor = interruptor;
-    }
-
-    bool should_terminate() const {
-        return (interruptor && interruptor->is_interrupted());
-    }
+    void interrupt() { interrupted = true; }
+    void reset_interrupt() { interrupted = false; }
+    bool should_terminate() const { return interrupted; }
 
 private:
     // Store all paths found for each agent
@@ -102,7 +97,7 @@ private:
     double time_limit = 30.0;
     int expanded_nodes = 0;
     
-    ThreadSafeInterruptor* interruptor = nullptr;
+    std::atomic<bool> interrupted{false};  // 内部中断状态
     
     // Core functions
     JPSPath search_by_jps(const Agent& agent);
