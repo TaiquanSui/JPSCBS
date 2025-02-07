@@ -6,15 +6,31 @@
 #include <chrono>
 
 namespace {
-    inline bool is_in_parent_chain(const std::shared_ptr<AStarNode>& current, const Vertex& point) {
-        auto temp = current;
-        while (temp) {
-            if (temp->pos == point) {
-                return true;
+    inline bool is_cycle_free(const std::shared_ptr<AStarNode>& current, const Vertex& point) {
+        auto node = current;
+        
+        while (node && node->parent) {
+            // 检查当前节点到其父节点之间的路径段
+            const Vertex& curr_point = node->pos;
+            const Vertex& parent_point = node->parent->pos;
+            Vertex delta = utils::calculateDirection(parent_point, curr_point);
+            
+            // 检查这段路径上的每个点
+            Vertex temp = parent_point;
+            while (temp != curr_point) {
+                if (temp == point) {
+                    return false;  // 发现环路，立即返回
+                }
+                temp = Vertex(temp.x + delta.x, temp.y + delta.y);
             }
-            temp = temp->parent;
+            if (curr_point == point) {
+                return false;  // 检查当前跳点
+            }
+            
+            node = node->parent;
         }
-        return false;
+        
+        return true;  // 没有发现环路
     }
 
     std::vector<Vertex> check_diagonal_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
@@ -113,7 +129,11 @@ namespace {
             //                ") - obstacle or outside grid");
             return Vertex(-1, -1);
         }
-    
+
+        if (!is_cycle_free(current, next)) {
+            return Vertex(-1, -1);
+        }
+
         // 4: if n = g then
         // 5: return n
         if (next == goal) {
@@ -126,7 +146,7 @@ namespace {
         // 6: if ∃ n′ ∈ neighbours(n) s.t. n′ is forced then
         // 7: return n
         if (dx != 0 && dy != 0) {  // Diagonal move
-            if(!check_diagonal_forced(grid, next.x, next.y, dx, dy).empty() && !is_in_parent_chain(current, next)) {
+            if(!check_diagonal_forced(grid, next.x, next.y, dx, dy).empty()) {
                 // logger::log_info(base_info.str() + " - Jump point found: (" + 
                 //                std::to_string(next.x) + "," + std::to_string(next.y) + 
                 //                ") - diagonal forced neighbor");
@@ -138,15 +158,13 @@ namespace {
             // 11: return n
             if (jump(next.x, next.y, dx, 0, current, grid, goal).x != -1 ||
                 jump(next.x, next.y, 0, dy, current, grid, goal).x != -1) {
-                if (!is_in_parent_chain(current, next)) {
                     // logger::log_info(base_info.str() + " - Jump point found: (" + 
                     //                std::to_string(next.x) + "," + std::to_string(next.y) + 
                     //                ") - diagonal recursive check");
-                    return next;
-                }
+                return next;
             }
         } else {
-            if(!check_straight_forced(grid, next.x, next.y, dx, dy).empty() && !is_in_parent_chain(current, next)) {
+            if(!check_straight_forced(grid, next.x, next.y, dx, dy).empty()) {
                 // logger::log_info(base_info.str() + " - Jump point found: (" + 
                 //                std::to_string(next.x) + "," + std::to_string(next.y) + 
                 //                ") - straight forced neighbor");
@@ -314,7 +332,7 @@ namespace {
         return JPSPath(std::move(path), std::move(jump_points), std::move(possible_intervals));
     }
     
-
+    
 }
 
 

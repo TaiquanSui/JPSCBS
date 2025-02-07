@@ -2,7 +2,7 @@
 
 std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents, 
                                               const std::vector<std::vector<int>>& grid) {
-    logger::log_info("Starting JPSCBS solver");
+    //logger::log_info("Starting JPSCBS solver");
     
     this->grid = grid;
     this->solutions.clear();        // 清空之前的解决方案
@@ -16,7 +16,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
     // Initialize root node and solutions
     auto root = initialize(agents);
     if(root == nullptr) {
-        logger::log_info("No solution");
+        //logger::log_info("No solution");
         return {};
     }
     
@@ -29,7 +29,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
 
         auto current = open_list.top();
         if (!current) {
-            logger::log_error("遇到空节点，跳过处理");
+            //logger::log_error("遇到空节点，跳过处理");
             open_list.pop();
             continue;
         }
@@ -48,7 +48,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         if (new_constraints.empty()) {
             std::vector<std::vector<Vertex>> final_paths;
             final_paths.reserve(agents.size());
-            logger::log_info("JPSCBS found solution with cost: " + std::to_string(current->cost));
+            //logger::log_info("JPSCBS found solution with cost: " + std::to_string(current->cost));
             for (const auto& agent : agents) {
                 final_paths.push_back(current->solution[agent.id].top().path);
             }
@@ -56,7 +56,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         }
 
         if (should_terminate()) {
-            logger::log_info("JPSCBS solver interrupted");
+            //logger::log_info("JPSCBS solver interrupted");
             return {};
         }
 
@@ -70,11 +70,16 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
 
         // generate new node for each constraint
         for (const auto& bypass_path : bypass_result.bypass_paths) {
-            logger::log_info("Processing constraint, constraint info:");
-            logger::log_info(bypass_path.first.toString());
+            if (should_terminate()) {
+                //logger::log_info("JPSCBS solver interrupted");
+                return {};
+            }
+
+            //logger::log_info("Processing constraint, constraint info:");
+            //logger::log_info(bypass_path.first.toString());
             
             if(bypass_path.second.empty()) {
-                logger::log_info("Bypass path is empty, skipping");
+                //logger::log_info("Bypass path is empty, skipping");
                 continue;
             }
 
@@ -82,7 +87,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
             new_node->constraints.push_back(bypass_path.first.constraint);
 
             if(!resolve_conflict_locally(*new_node, bypass_path.first, bypass_path.second)) {
-                logger::log_info("Failed to resolve conflict, skipping");
+                //logger::log_info("Failed to resolve conflict, skipping");
                 continue;
             }
             
@@ -92,20 +97,20 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         }
     }
     
-    logger::log_info("JPSCBS found no solution");
+    //logger::log_info("JPSCBS found no solution");
     return {};  // No solution
 }
 
 std::shared_ptr<JPSCBSNode> JPSCBS::initialize(const std::vector<Agent>& agents) {
     auto root = std::make_shared<JPSCBSNode>();
-    logger::log_info("Initializing JPSCBS");
+    //logger::log_info("Initializing JPSCBS");
     
     // Find initial paths for each agent
     for (const auto& agent : agents) {
-        logger::log_info("Initializing agent " + std::to_string(agent.id));
+        //logger::log_info("Initializing agent " + std::to_string(agent.id));
         JPSPath path = search_by_jps(agent);
         if (path.path.empty()) {
-            logger::log_info("No initial path found for agent " + std::to_string(agent.id));
+            //logger::log_info("No initial path found for agent " + std::to_string(agent.id));
             return nullptr;
         }
         
@@ -126,12 +131,12 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
     for (auto& [agent_id, agent_paths] : node.solution) {
         // 检查 agent_states 中是否存在该智能体
         if (agent_states.find(agent_id) == agent_states.end()) {
-            logger::log_warning("can't find agent " + std::to_string(agent_id) + " state");
+            //logger::log_warning("can't find agent " + std::to_string(agent_id) + " state");
             continue;
         }
         // 如果该智能体的open_list为空，说明无法找到更多路径，跳过更新
         if (agent_states[agent_id].open_list.empty()) {
-            logger::log_warning("agent " + std::to_string(agent_id) + " has no more path");
+            //logger::log_warning("agent " + std::to_string(agent_id) + " has no more path");
             continue;
         }
         
@@ -142,7 +147,7 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
                node_solutions_cost > solutions_cost) {
             
             // Continue searching for a new path
-            logger::log_info("continue searching for a new path, agent_id: " + std::to_string(agent_id));
+            //logger::log_info("continue searching for a new path, agent_id: " + std::to_string(agent_id));
             JPSPath new_path = search_by_jps(agents[agent_id]);
             
             if (!new_path.path.empty()) {
@@ -150,7 +155,7 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
                 solutions[agent_id].push_back(new_path);   
             } else {
                 // 如果找不到新路径，说明搜索已完成，清空open_list表示不需要继续搜索
-                logger::log_info("no more path, clear open_list");
+                //logger::log_info("no more path, clear open_list");
                 agent_states[agent_id].clear();
                 break;
             }
@@ -195,11 +200,11 @@ double JPSCBS::calculate_sic(const JPSCBSNode& node) {
 
 
 void JPSCBS::validate_and_repair_solutions(const std::vector<Agent>& agents, JPSCBSNode& node) {
-    logger::log_info("Starting to validate and repair paths");
+    //logger::log_info("Starting to validate and repair paths");
 
     for (const auto& agent : agents) {
         if (node.solution.find(agent.id) == node.solution.end()) {
-            logger::log_error("can't find agent " + std::to_string(agent.id) + " solution");
+            //logger::log_error("can't find agent " + std::to_string(agent.id) + " solution");
             continue;
         }
         
@@ -207,7 +212,7 @@ void JPSCBS::validate_and_repair_solutions(const std::vector<Agent>& agents, JPS
         
         // 如果没有可用路径，直接返回失败
         if (agent_paths.empty()) {
-            logger::log_warning("Agent " + std::to_string(agent.id) + " has no available paths");
+            //logger::log_warning("Agent " + std::to_string(agent.id) + " has no available paths");
             continue;
         }
 
@@ -218,17 +223,17 @@ void JPSCBS::validate_and_repair_solutions(const std::vector<Agent>& agents, JPS
             auto violated_constraints = utils::find_violated_constrains(agent.id, current_path.path, node.constraints);
             
             if (violated_constraints.empty()) {
-                logger::log_info("Agent " + std::to_string(agent.id) + " path is valid");
+                //logger::log_info("Agent " + std::to_string(agent.id) + " path is valid");
                 break;
             } 
 
-            // logger::log_info("Agent " + std::to_string(agent.id) + " path violates constraints, attempting repair");
+            // //logger::log_info("Agent " + std::to_string(agent.id) + " path violates constraints, attempting repair");
             
             for (const auto& constraint : violated_constraints) {
                 auto constraint_infos = collect_constraint_infos(node, {constraint});
 
                 if (constraint_infos.empty()) {
-                    logger::log_info("Repair found constraint is problematic");
+                    //logger::log_info("Repair found constraint is problematic");
                     continue;
                 }
 
@@ -237,7 +242,7 @@ void JPSCBS::validate_and_repair_solutions(const std::vector<Agent>& agents, JPS
                     continue;
                 }
                 resolve_conflict_locally(node, bypass_result.bypass_paths[0].first, bypass_result.bypass_paths[0].second);
-                // logger::print_constraint(constraint, "Repaired constraint: ");
+                // //logger::print_constraint(constraint, "Repaired constraint: ");
             }
                 
         }
@@ -324,14 +329,14 @@ std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
         }
     }
     
-    logger::log_info("No new constraints found");
+    //logger::log_info("No new constraints found");
     return {};
 }
 
 BypassResult JPSCBS::find_bypass(JPSCBSNode& node, 
                                 const std::vector<ConstraintInfo>& constraint_infos) {
     int original_conflicts = count_conflicts(node);
-    logger::log_info("Original conflict count: " + std::to_string(original_conflicts));
+    //logger::log_info("Original conflict count: " + std::to_string(original_conflicts));
 
     std::vector<std::pair<ConstraintInfo, std::vector<Vertex>>> bypass_paths;
 
@@ -343,18 +348,21 @@ BypassResult JPSCBS::find_bypass(JPSCBSNode& node,
         std::vector<Constraint> temp_constraints = node.constraints;
         temp_constraints.push_back(info.constraint);
 
-        logger::log_info("Attempting to find local bypass");
-        logger::log_info("agent_id: " + std::to_string(info.constraint.agent));
-        logger::log_info("start_time: " + std::to_string(info.jp1_path_index));
-        logger::log_info("end_time: " + std::to_string(info.jp2_path_index));
-        logger::print_constraints(temp_constraints, "Temporary constraints");
+        //logger::log_info("Attempting to find local bypass");
+        //logger::log_info("agent_id: " + std::to_string(info.constraint.agent));
+        //logger::log_info("start_time: " + std::to_string(info.jp1_path_index));
+        //logger::log_info("end_time: " + std::to_string(info.jp2_path_index));
+        //logger::print_constraints(temp_constraints, "Temporary constraints");
+
+        // 计算CAT，排除当前智能体
+        ConflictAvoidanceTable cat = calculate_cat({info.constraint.agent}, node);
 
         auto alt_path = a_star(info.constraint.agent, info.jp1, info.jp2,
-                             grid, temp_constraints, info.jp1_path_index);
+                             grid, temp_constraints, info.jp1_path_index, cat);
         bypass_paths.emplace_back(info, alt_path);
 
         if (!alt_path.empty()) {
-            logger::log_info("Found bypass path: " + logger::vectorToString(alt_path));
+            //logger::log_info("Found bypass path: " + //logger::vectorToString(alt_path));
             
             std::vector<Vertex> original_segment(
                 current_path.path.begin() + info.jp1_path_index,
@@ -380,7 +388,7 @@ BypassResult JPSCBS::find_bypass(JPSCBSNode& node,
                 updated_path.path = std::move(new_path);
 
                 int new_conflicts = count_conflicts(node);
-                logger::log_info("New conflict count: " + std::to_string(new_conflicts));
+                //logger::log_info("New conflict count: " + std::to_string(new_conflicts));
 
                 if (new_conflicts < original_conflicts) {
                     agent_paths.pop();
@@ -389,7 +397,7 @@ BypassResult JPSCBS::find_bypass(JPSCBSNode& node,
                     print_node_info(node, "Found better symmetric bypass path");
                     return {true, {}};
                 } else {
-                    logger::log_info("Bypass path did not reduce conflicts, keeping path for later use");
+                    //logger::log_info("Bypass path did not reduce conflicts, keeping path for later use");
                 }
             }
         }
@@ -403,31 +411,31 @@ bool JPSCBS::resolve_conflict_locally(JPSCBSNode& node,
                                     const std::vector<Vertex>& bypass_paths) {
     // 原有的resolve_conflict_locally逻辑
     if (node.solution.find(info.constraint.agent) == node.solution.end()) {
-        logger::log_error("can't find agent " + std::to_string(info.constraint.agent) + " solution");
+        //logger::log_error("can't find agent " + std::to_string(info.constraint.agent) + " solution");
         return false;
     }
 
     auto& agent_paths = node.solution[info.constraint.agent];
     if (agent_paths.empty()) {
-        logger::log_error("agent " + std::to_string(info.constraint.agent) + " has no path");
+        //logger::log_error("agent " + std::to_string(info.constraint.agent) + " has no path");
         return false;
     }
 
     const auto& current_path = agent_paths.top();
     if (info.jp1_path_index >= current_path.path.size() || 
         info.jp2_path_index >= current_path.path.size()) {
-        logger::log_error("path index out of range");
+        //logger::log_error("path index out of range");
         return false;
     }
 
     // First try to find a path within the current interval
-    logger::log_info("Local conflict resolution");
-    // logger::log_info("agent_id: " + std::to_string(info.constraint.agent));
-    // logger::log_info("start_jp: " + std::to_string(info.jp1.x) + "," + std::to_string(info.jp1.y));
-    // logger::log_info("end_jp: " + std::to_string(info.jp2.x) + "," + std::to_string(info.jp2.y));
-    // logger::log_info("start_time: " + std::to_string(info.jp1_path_index));
-    // logger::log_info("end_time: " + std::to_string(info.jp2_path_index));
-    // logger::print_constraints(node.constraints, "Constraints");
+    //logger::log_info("Local conflict resolution");
+    //logger::log_info("agent_id: " + std::to_string(info.constraint.agent));
+    //logger::log_info("start_jp: " + std::to_string(info.jp1.x) + "," + std::to_string(info.jp1.y));
+    //logger::log_info("end_jp: " + std::to_string(info.jp2.x) + "," + std::to_string(info.jp2.y));
+    //logger::log_info("start_time: " + std::to_string(info.jp1_path_index));
+    //logger::log_info("end_time: " + std::to_string(info.jp2_path_index));
+    //logger::print_constraints(node.constraints, "Constraints");
     auto& path = current_path.path;
     
     // 使用索引获取对应的迭代器
@@ -439,7 +447,7 @@ bool JPSCBS::resolve_conflict_locally(JPSCBSNode& node,
         auto next_jp = current_path.jump_points[next_jp_index];  // 使用current_path而不是node中的路径
             
         if (has_better_solution(bypass_paths, info.jp2, next_jp)) {
-            logger::log_info("Could find better path");
+            //logger::log_info("Could find better path");
             auto next_jp_path_index = std::distance(path.begin(), 
                                                     std::find(path.begin(), path.end(), next_jp));
             // Recursively try
@@ -451,13 +459,14 @@ bool JPSCBS::resolve_conflict_locally(JPSCBSNode& node,
                                           next_jp,
                                           info.jp1_jumps_index,
                                           next_jp_index);
-            logger::log_info("Attempting to recursively find better path");
+            //logger::log_info("Attempting to recursively find better path");
+            ConflictAvoidanceTable cat = calculate_cat({info.constraint.agent}, node);
             auto new_path = a_star(new_info.constraint.agent, new_info.jp1, new_info.jp2,
-                             grid, node.constraints, new_info.jp1_path_index);
+                             grid, node.constraints, new_info.jp1_path_index, cat);
             return resolve_conflict_locally(node, new_info, new_path);
         } else {
             // Use bypass path directly
-            logger::log_info("No better path found, using bypass path");
+            //logger::log_info("No better path found, using bypass path");
             update_path_with_local_solution(node, info, bypass_paths);
             return true;
         }
@@ -501,18 +510,18 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
                                              const ConstraintInfo& info, 
                                              const std::vector<Vertex>& local_path) {
     if (local_path.empty()) {
-        logger::log_error("local path is empty");
+        //logger::log_error("local path is empty");
         return;
     }
 
     if (node.solution.find(info.constraint.agent) == node.solution.end()) {
-        logger::log_error("can't find agent " + std::to_string(info.constraint.agent) + " solution");
+        //logger::log_error("can't find agent " + std::to_string(info.constraint.agent) + " solution");
         return;
     }
 
     auto& agent_paths = node.solution[info.constraint.agent];
     if (agent_paths.empty()) {
-        logger::log_error("agent path queue is empty");
+        //logger::log_error("agent path queue is empty");
         return;
     }
 
@@ -539,8 +548,8 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
                        current_path.path.end());
     }
 
-    logger::log_info("update_path_with_local_solution");
-    logger::log_info("new_path: " + logger::vectorToString(new_path));
+    //logger::log_info("update_path_with_local_solution");
+    //logger::log_info("new_path: " + logger::vectorToString(new_path));
 
     // Update jump points
     std::vector<Vertex> new_jump_points;
@@ -560,7 +569,7 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
     JPSPath updated_path = std::move(current_path);
     updated_path.path = std::move(new_path);
     updated_path.jump_points = std::move(new_jump_points);
-    // logger::log_info("updated_path: " + logger::vectorToString(updated_path.path));
+    //logger::log_info("updated_path: " + logger::vectorToString(updated_path.path));
 
     // 打印更新前的所有路径
     // logger::log_info("Before update - All paths in priority queue:");
@@ -591,10 +600,10 @@ void JPSCBS::update_path_with_local_solution(JPSCBSNode& node,
 
 void JPSCBS::print_node_info(const JPSCBSNode& node, const std::string& prefix) {
     if (!prefix.empty()) {
-        logger::log_info(prefix + ":");
+        //logger::log_info(prefix + ":");
     }
-    logger::log_info("Total cost: " + std::to_string(std::round(node.cost * 1000) / 1000.0));
-    logger::print_constraints(node.constraints);
+    //logger::log_info("Total cost: " + std::to_string(std::round(node.cost * 1000) / 1000.0));
+    //logger::print_constraints(node.constraints);
     
     for (const auto& [agent_id, paths] : node.solution) {
         if (!paths.empty()) {
@@ -602,10 +611,10 @@ void JPSCBS::print_node_info(const JPSCBSNode& node, const std::string& prefix) 
             for (const auto& jp : paths.top().jump_points) {
                 jump_points_str += "(" + std::to_string(jp.x) + "," + std::to_string(jp.y) + ") ";
             }
-            logger::log_info(jump_points_str);
+            //logger::log_info(jump_points_str);
         }
     }
-    logger::log_info("------------------------");
+    //logger::log_info("------------------------");
 }
 
 int JPSCBS::count_conflicts(const JPSCBSNode& node) {
@@ -614,7 +623,7 @@ int JPSCBS::count_conflicts(const JPSCBSNode& node) {
     
     for (auto it1 = solution.begin(); it1 != solution.end(); ++it1) {
         if (it1->second.empty()) {
-            logger::log_warning("agent " + std::to_string(it1->first) + " has no path");
+            //logger::log_warning("agent " + std::to_string(it1->first) + " has no path");
             continue;
         }
         
@@ -622,7 +631,7 @@ int JPSCBS::count_conflicts(const JPSCBSNode& node) {
         ++it2;
         for (; it2 != solution.end(); ++it2) {
             if (it2->second.empty()) {
-                logger::log_warning("agent " + std::to_string(it2->first) + " has no path");
+                //logger::log_warning("agent " + std::to_string(it2->first) + " has no path");
                 continue;
             }
             total_conflicts += utils::count_conflicts(
@@ -640,13 +649,13 @@ int JPSCBS::count_conflicts(const JPSCBSNode& node) {
 std::vector<ConstraintInfo> JPSCBS::collect_constraint_infos(const JPSCBSNode& node, 
                                                            const std::vector<Constraint>& constraints) {
     std::vector<ConstraintInfo> constraint_infos;
-    logger::log_info("Starting to generate constraint info");
-    logger::print_constraints(constraints);
+    //logger::log_info("Starting to generate constraint info");
+    //logger::print_constraints(constraints);
 
     for(const auto& constraint : constraints) {
         if (node.solution.find(constraint.agent) == node.solution.end() || 
             node.solution.at(constraint.agent).empty()) {
-            logger::log_warning("Agent " + std::to_string(constraint.agent) + " has no path");
+            //logger::log_warning("Agent " + std::to_string(constraint.agent) + " has no path");
             continue;
         }
 
@@ -657,8 +666,8 @@ std::vector<ConstraintInfo> JPSCBS::collect_constraint_infos(const JPSCBSNode& n
         // 找到约束点在路径中的位置
         auto constraint_pos = std::find(path.begin(), path.end(), constraint.vertex);
         if (constraint_pos == path.end()) {
-            logger::log_warning("Constraint vertex not found in path for agent " + 
-                              std::to_string(constraint.agent));
+            //logger::log_warning("Constraint vertex not found in path for agent " + 
+            //                     std::to_string(constraint.agent));
             continue;
         }
         
@@ -673,7 +682,7 @@ std::vector<ConstraintInfo> JPSCBS::collect_constraint_infos(const JPSCBSNode& n
             auto jp2_pos = std::find(jp1_pos, path.end(), jp2);
             
             if (jp1_pos == path.end() || jp2_pos == path.end()) {
-                logger::log_warning("Jump point not found in path");
+                //logger::log_warning("Jump point not found in path");
                 continue;
             }
 
@@ -691,26 +700,47 @@ std::vector<ConstraintInfo> JPSCBS::collect_constraint_infos(const JPSCBSNode& n
                     i,
                     i + 1
                 );
-                logger::log_info("Found constraint info for agent " + 
-                               std::to_string(constraint.agent));
+                //logger::log_info("Found constraint info for agent " + 
+                //                 std::to_string(constraint.agent));
                 break;
             }
         }
     }
 
     for (const auto& info : constraint_infos) {
-        logger::log_info("Constraint info: ");
-        logger::log_info(info.toString());
+        //logger::log_info("Constraint info: ");
+        //logger::log_info(info.toString());
     }
 
     if (constraint_infos.empty()) {
-        logger::log_warning("No constraint infos generated");
+        //logger::log_warning("No constraint infos generated");
     }
 
-    logger::log_info("Collected constraint infos done");
+    //logger::log_info("Collected constraint infos done");
 
     return constraint_infos;
 }
 
-
-
+ConflictAvoidanceTable JPSCBS::calculate_cat(const std::unordered_set<int>& excluded_agents, const JPSCBSNode& node) const {
+    ConflictAvoidanceTable cat;
+    
+    // 遍历所有智能体的解决方案
+    for (const auto& [agent_id, paths] : node.solution) {
+        if (excluded_agents.count(agent_id) > 0) continue;  // 跳过被排除的智能体
+        
+        if (!paths.empty()) {
+            const auto& path = paths.top().path;
+            // 对路径中的每个位置添加约束
+            for (size_t t = 0; t < path.size(); ++t) {
+                cat.addConstraint(path[t], t);
+                
+                // 如果是路径的最后一个位置，添加终点约束
+                if (t == path.size() - 1) {
+                    cat.addGoalConstraint(path[t], t);
+                }
+            }
+        }
+    }
+    
+    return cat;
+}

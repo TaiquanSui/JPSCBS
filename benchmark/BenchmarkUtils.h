@@ -68,7 +68,8 @@ public:
     
     static void benchmark_all_scenarios_comparison(
         CBS* solver1,
-        JPSCBS* solver2);
+        JPSCBS* solver2,
+        int cpu_core = -1);
 
 private:
     template<typename Solver>
@@ -79,16 +80,17 @@ private:
         double time_limit = 30.0);
 
     template<typename Solver>
-    static std::vector<BenchmarkResult> run_all_scenarios_impl(Solver* solver);
+    static std::vector<BenchmarkResult> run_all_scenarios_impl(const std::string& map_path, Solver* solver);
 
     // 辅助函数
     static std::string get_project_root();
+    static std::vector<std::string> get_all_map_paths();
     static std::string get_map_name(const std::string& map_path);
     static std::string make_scen_path(const std::string& scen_dir, 
                                     const std::string& map_name,
                                     const std::string& type,
                                     int index);
-    
+         
     static void print_result(const std::string& map_file, 
                            const std::string& scen_file,
                            const BenchmarkResult& result);
@@ -97,8 +99,13 @@ private:
     
     static void write_results_to_csv(const std::string& filename, 
                                    const std::vector<BenchmarkResult>& results);
-                                   
+    static void write_summary_to_csv(const std::string& filename,
+                                   const std::vector<BenchmarkResult>& all_results);
+
     static void write_comparison_results_to_csv(const std::string& filename,
+                                              const std::vector<BenchmarkResult>& cbs_results,
+                                              const std::vector<BenchmarkResult>& jpscbs_results);
+    static void write_comparison_summary_to_csv(const std::string& filename,
                                               const std::vector<BenchmarkResult>& cbs_results,
                                               const std::vector<BenchmarkResult>& jpscbs_results);
 
@@ -106,6 +113,22 @@ private:
     static std::ofstream create_csv_file(const std::string& filename);
 
     static void set_thread_affinity(int cpu_id);
+
+    static int find_least_busy_cpu();
+    static double get_cpu_load(int cpu_id);
+
+    // 新增函数
+    static void optimize_thread_priority();
+    static void restore_thread_priority();
+    
+    #ifdef _WIN32
+        static DWORD_PTR original_affinity;
+        static int original_priority;
+    #elif __linux__
+        static cpu_set_t original_affinity;
+        static int original_priority;
+    #endif
 };
+
 
 #endif // BENCHMARK_UTILS_H

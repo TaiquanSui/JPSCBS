@@ -130,6 +130,7 @@ private:
     std::vector<ConstraintInfo> collect_constraint_infos(const JPSCBSNode& node, 
                                                        const std::vector<Constraint>& constraints);
     std::shared_ptr<JPSCBSNode> initialize(const std::vector<Agent>& agents);
+    ConflictAvoidanceTable calculate_cat(const std::unordered_set<int>& excluded_agents, const JPSCBSNode& node) const;
 };
 
 #endif // JPSCBS_H
