@@ -107,7 +107,12 @@ TEST_F(JPSTest, StateReuse2) {
     ASSERT_FALSE(result2.path.empty());
     ASSERT_TRUE(utils::validatePath(result2.path, start, goal, grid));
 
-    // 第三次搜索
+    // 第二次搜索
     auto result3 = jump_point_search(start, goal, grid, state);
-    ASSERT_TRUE(result3.path.empty());
+    ASSERT_FALSE(result3.path.empty());
+    ASSERT_TRUE(utils::validatePath(result3.path, start, goal, grid));
+
+    // 第三次搜索
+    auto result4 = jump_point_search(start, goal, grid, state);
+    ASSERT_TRUE(result4.path.empty());
 }

@@ -2,8 +2,11 @@
 #include "../utilities/Log.h"
 #include "../utilities/Utility.h"
 #include <memory>
+#include <chrono>  // 添加头文件
 
 namespace {
+    const int MAX_SEARCH_TIME = 30;  // 最大搜索时间（秒）
+    
     std::vector<Vertex> reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
         std::vector<Vertex> path;
         auto node = goal_node;
@@ -18,6 +21,8 @@ namespace {
 
 std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
                           const std::vector<std::vector<int>>& grid) {
+    // 记录开始时间
+    auto start_time = std::chrono::steady_clock::now();
 
     if(!utils::isWalkable(grid, start) || !utils::isWalkable(grid, goal)) {
         return {};
@@ -32,13 +37,22 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
     open_list.push(start_node);
 
     while (!open_list.empty()) {
-        auto current = open_list.top();
-        open_list.pop();
+        // 检查是否超时
+        auto current_time = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
+        if (elapsed >= MAX_SEARCH_TIME) {
+            logger::log_warning("A* search timed out after " + std::to_string(MAX_SEARCH_TIME) + " seconds");
+            return {};
+        }
 
         // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," +
-        //                std::to_string(current->pos.y) + "), g值: " +
-        //                std::to_string(current->g) + ", h值: " +
+        //                std::to_string(current->pos.y) + "), g-value: " +
+        //                std::to_string(current->g) + ", h-value: " +
         //                std::to_string(current->h));
+
+
+        auto current = open_list.top();
+        open_list.pop();
 
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
@@ -89,19 +103,16 @@ std::vector<Vertex> a_star(int agent_id,
                           const std::vector<Constraint>& constraints,
                           int start_time,
                           const ConflictAvoidanceTable& cat) {
+    // 记录开始时间
+    auto search_start_time = std::chrono::steady_clock::now();
 
     if(!utils::isWalkable(grid, start) || !utils::isWalkable(grid, goal)) {
         return {};
     }
 
-    const int MAX_TIME = 100000;  // 设置一个合理的最大时间限制
-
-    
     std::priority_queue<std::shared_ptr<AStarNode>, 
                        std::vector<std::shared_ptr<AStarNode>>, 
                        AStarNodeComparator> open_list;
-    
-    // 修改closed_list的键类型，加入时间维度
     std::unordered_map<StateKey, double, StateKeyHash> closed_list;
 
     auto start_node = std::make_shared<AStarNode>(
@@ -109,8 +120,14 @@ std::vector<Vertex> a_star(int agent_id,
     open_list.push(start_node);
 
     while (!open_list.empty()) {
-        auto current = open_list.top();
-        open_list.pop();
+        // 检查是否超时
+        auto current_time = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - search_start_time).count();
+        if (elapsed >= MAX_SEARCH_TIME) {
+            logger::log_warning("Agent " + std::to_string(agent_id) + 
+                              " A* search timed out after " + std::to_string(MAX_SEARCH_TIME) + " seconds");
+            return {};
+        }
 
         // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," +
         //                std::to_string(current->pos.y) + "), g-value: " +
@@ -118,12 +135,8 @@ std::vector<Vertex> a_star(int agent_id,
         //                std::to_string(current->h) + ", time: " +
         //                std::to_string(current->time));
 
-        // 如果超过最大时间限制，认为无解
-        if (current->time >= MAX_TIME) {
-            logger::log_info("Agent " + std::to_string(agent_id) + 
-                           " search exceeded maximum time limit, no solution found");
-            return {};
-        }
+        auto current = open_list.top();
+        open_list.pop();
 
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
@@ -135,11 +148,6 @@ std::vector<Vertex> a_star(int agent_id,
         for (const auto& move : Action::MOVEMENTS_9) {
             Vertex next_pos(current->pos.x + move.x, current->pos.y + move.y);
             int next_time = current->time + 1;
-
-            // 检查是否超过时间限制
-            if (next_time >= MAX_TIME) {
-                continue;
-            }
 
             if (!utils::isWalkable(grid, next_pos)) {
                 continue;

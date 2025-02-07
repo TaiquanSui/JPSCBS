@@ -387,30 +387,52 @@ void BenchmarkUtils::write_results_to_csv(
     try {
         auto file = create_csv_file(filename);
         
-        // 写入详细结果
+        // 按地图分组结果
+        std::map<std::string, std::vector<BenchmarkResult>> results_by_map;
+        for (const auto& result : results) {
+            results_by_map[result.map_name].push_back(result);
+        }
+        
+        // 写入详细结果，并在每个地图的结果后添加该地图的统计信息
         file << "Detailed Results:\n";
         file << "Map,Scenario,Agents,Success,Runtime,Total Cost,Nodes Expanded\n";
         
-        for (const auto& result : results) {
-            file << result.map_name << ","
-                 << result.scen_name << ","
-                 << result.num_agents << ","
-                 << (result.success ? "Yes" : "No") << ","
-                 << std::fixed << std::setprecision(2) << result.runtime << ","
-                 << result.total_cost << ","
-                 << result.nodes_expanded << "\n";
+        for (const auto& [map_name, map_results] : results_by_map) {
+            // 写入该地图的所有场景结果
+            for (const auto& result : map_results) {
+                file << result.map_name << ","
+                     << result.scen_name << ","
+                     << result.num_agents << ","
+                     << (result.success ? "Yes" : "No") << ","
+                     << std::fixed << std::setprecision(2) << result.runtime << ","
+                     << result.total_cost << ","
+                     << result.nodes_expanded << "\n";
+            }
+            
+            // 计算并写入该地图的统计信息
+            file << "\nStatistics for Map " << map_name << ":\n";
+            file << "Agents,Success Rate,Average Runtime,Average Nodes\n";
+            
+            auto map_stats = calculate_stats(map_results);
+            for (const auto& [agents, rate] : map_stats.success_rates) {
+                file << agents << ","
+                     << std::fixed << std::setprecision(2) << (rate * 100) << "%,"
+                     << map_stats.avg_runtimes[agents] << ","
+                     << map_stats.avg_nodes[agents] << "\n";
+            }
+            file << "\n";  // 添加空行分隔不同地图的结果
         }
         
-        // 写入统计信息
-        auto stats = calculate_stats(results);
-        file << "\nSummary Statistics:\n";
+        // 写入所有场景的总体统计信息
+        auto overall_stats = calculate_stats(results);
+        file << "\nOverall Summary Statistics:\n";
         file << "Agents,Success Rate,Average Runtime,Average Nodes\n";
         
-        for (const auto& [agents, rate] : stats.success_rates) {
+        for (const auto& [agents, rate] : overall_stats.success_rates) {
             file << agents << ","
                  << std::fixed << std::setprecision(2) << (rate * 100) << "%,"
-                 << stats.avg_runtimes[agents] << ","
-                 << stats.avg_nodes[agents] << "\n";
+                 << overall_stats.avg_runtimes[agents] << ","
+                 << overall_stats.avg_nodes[agents] << "\n";
         }
         
         file.close();
@@ -430,42 +452,83 @@ void BenchmarkUtils::write_comparison_results_to_csv(
     try {
         auto file = create_csv_file(filename);
         
+        // 按地图分组结果
+        std::map<std::string, std::pair<std::vector<BenchmarkResult>, std::vector<BenchmarkResult>>> results_by_map;
+        for (const auto& result : cbs_results) {
+            results_by_map[result.map_name].first.push_back(result);
+        }
+        for (const auto& result : jpscbs_results) {
+            results_by_map[result.map_name].second.push_back(result);
+        }
+        
         // 写入详细比较结果
         file << "Detailed Comparison Results:\n";
         file << "Map,Scenario,Agents,CBS Success,CBS Runtime,CBS Total Cost,CBS Nodes,"
              << "JPSCBS Success,JPSCBS Runtime,JPSCBS Total Cost,JPSCBS Nodes\n";
 
-        size_t max_size = std::max(cbs_results.size(), jpscbs_results.size());
-        for (size_t i = 0; i < max_size; ++i) {
-            if (i < cbs_results.size()) {
-                const auto& cbs = cbs_results[i];
-                file << cbs.map_name << ","
-                     << cbs.scen_name << ","
-                     << cbs.num_agents << ","
-                     << (cbs.success ? "Yes" : "No") << ","
-                     << std::fixed << std::setprecision(2) << cbs.runtime << ","
-                     << cbs.total_cost << ","
-                     << cbs.nodes_expanded << ",";
-            } else {
-                file << ",,,,,,,,";
-            }
+        for (const auto& [map_name, map_results] : results_by_map) {
+            const auto& map_cbs_results = map_results.first;
+            const auto& map_jpscbs_results = map_results.second;
+            
+            // 写入该地图的所有场景比较结果
+            size_t max_size = std::max(map_cbs_results.size(), map_jpscbs_results.size());
+            for (size_t i = 0; i < max_size; ++i) {
+                file << map_name << ",";
+                
+                if (i < map_cbs_results.size()) {
+                    const auto& cbs = map_cbs_results[i];
+                    file << cbs.scen_name << ","
+                         << cbs.num_agents << ","
+                         << (cbs.success ? "Yes" : "No") << ","
+                         << std::fixed << std::setprecision(2) << cbs.runtime << ","
+                         << cbs.total_cost << ","
+                         << cbs.nodes_expanded << ",";
+                } else {
+                    file << ",,,,,,";
+                }
 
-            if (i < jpscbs_results.size()) {
-                const auto& jpscbs = jpscbs_results[i];
-                file << (jpscbs.success ? "Yes" : "No") << ","
-                     << std::fixed << std::setprecision(2) << jpscbs.runtime << ","
-                     << jpscbs.total_cost << ","
-                     << jpscbs.nodes_expanded << "\n";
-            } else {
-                file << ",,,,\n";
+                if (i < map_jpscbs_results.size()) {
+                    const auto& jpscbs = map_jpscbs_results[i];
+                    file << (jpscbs.success ? "Yes" : "No") << ","
+                         << std::fixed << std::setprecision(2) << jpscbs.runtime << ","
+                         << jpscbs.total_cost << ","
+                         << jpscbs.nodes_expanded << "\n";
+                } else {
+                    file << ",,,,\n";
+                }
             }
+            
+            // 写入该地图的统计信息比较
+            auto cbs_map_stats = calculate_stats(map_cbs_results);
+            auto jpscbs_map_stats = calculate_stats(map_jpscbs_results);
+            
+            file << "\nStatistics Comparison for Map " << map_name << ":\n";
+            file << "Agents,CBS Success Rate,CBS Avg Runtime,CBS Avg Nodes,"
+                 << "JPSCBS Success Rate,JPSCBS Avg Runtime,JPSCBS Avg Nodes\n";
+            
+            // 合并所有agent数量
+            std::set<size_t> map_agents;
+            for (const auto& [agents, _] : cbs_map_stats.success_rates) map_agents.insert(agents);
+            for (const auto& [agents, _] : jpscbs_map_stats.success_rates) map_agents.insert(agents);
+            
+            for (size_t agents : map_agents) {
+                file << agents << ","
+                     << std::fixed << std::setprecision(2)
+                     << (cbs_map_stats.success_rates[agents] * 100) << "%,"
+                     << cbs_map_stats.avg_runtimes[agents] << ","
+                     << cbs_map_stats.avg_nodes[agents] << ","
+                     << (jpscbs_map_stats.success_rates[agents] * 100) << "%,"
+                     << jpscbs_map_stats.avg_runtimes[agents] << ","
+                     << jpscbs_map_stats.avg_nodes[agents] << "\n";
+            }
+            file << "\n";  // 添加空行分隔不同地图的结果
         }
         
-        // 写入统计信息比较
+        // 写入总体统计信息比较
         auto cbs_stats = calculate_stats(cbs_results);
         auto jpscbs_stats = calculate_stats(jpscbs_results);
         
-        file << "\nSummary Statistics Comparison:\n";
+        file << "\nOverall Summary Statistics Comparison:\n";
         file << "Agents,CBS Success Rate,CBS Avg Runtime,CBS Avg Nodes,"
              << "JPSCBS Success Rate,JPSCBS Avg Runtime,JPSCBS Avg Nodes\n";
         

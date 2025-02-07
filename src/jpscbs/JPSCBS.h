@@ -58,9 +58,9 @@ struct ConstraintInfo {
     std::string toString() const {
         std::stringstream ss;
         ss << "ConstraintInfo{\n"
-           << "  constraint: 智能体 " << constraint.agent 
-           << " 在时间 " << constraint.time 
-           << " 不能到达位置(" << constraint.vertex.x << "," << constraint.vertex.y << ")\n"
+           << "  constraint: Agent " << constraint.agent 
+           << " cannot reach position (" << constraint.vertex.x << "," << constraint.vertex.y 
+           << ") at time " << constraint.time << "\n"
            << "  jp1: (" << jp1.x << "," << jp1.y 
            << ") [path_idx: " << jp1_path_index 
            << ", jumps_idx: " << jp1_jumps_index << "]\n"
@@ -71,6 +71,12 @@ struct ConstraintInfo {
            << "}";
         return ss.str();
     }
+};
+
+// 添加新的返回类型结构体
+struct BypassResult {
+    bool success;
+    std::vector<std::pair<ConstraintInfo, std::vector<Vertex>>> bypass_paths;
 };
 
 class JPSCBS {
@@ -104,13 +110,17 @@ private:
     void update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node);
     void validate_and_repair_solutions(const std::vector<Agent>& agents, JPSCBSNode& node);
     std::vector<Constraint> generate_constraints(const JPSCBSNode& node);
-    bool find_alt_symmetric_paths(JPSCBSNode& node,
-                                const std::vector<ConstraintInfo>& constraint_infos);
+    BypassResult find_bypass(JPSCBSNode& node,
+                           const std::vector<ConstraintInfo>& constraint_infos);
     
-    void resolve_conflict_locally(JPSCBSNode& node,
-                                const ConstraintInfo& constraint_info);
+    bool resolve_conflict_locally(JPSCBSNode& node,
+                                const ConstraintInfo& constraint_info,
+                                const std::vector<Vertex>& bypass_paths);
     double calculate_sic(const JPSCBSNode& node);
+
+
     void update_path_with_local_solution(JPSCBSNode& node, const ConstraintInfo& info, const std::vector<Vertex>& local_path);
+
     bool has_better_solution(const std::vector<Vertex>& new_path, 
                                   const Vertex& jp2, 
                                   const Vertex& next_jp);

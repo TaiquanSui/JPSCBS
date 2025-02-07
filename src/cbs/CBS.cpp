@@ -45,6 +45,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
         expanded_nodes++;  // 增加计数器
         // print_node_info(current, "Current Node");
 
+        logger::log_info("Generating constraints");
         auto constraints = generate_constraints(current);
 
         if (constraints.empty()) {
@@ -53,9 +54,6 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
             for (const auto& agent : agents) {
                 result.push_back(current.solution[agent.id]);
             }
-            
-            // print_node_info(current, "Solution Found");
-            
             return result;
         }
 
@@ -66,6 +64,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
 
         // Try to find bypass solutions for all agents
         if (use_bypass) {
+            logger::log_info("Finding bypass solutions");
             if (find_bypass(current, agents, constraints, grid)) {
                 open_list.push(current);
                 continue;
@@ -74,9 +73,11 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
 
         // Create child nodes and add constraints
         for (const auto& constraint : constraints) {
+            logger::log_info("Creating child node");
             CBSNode child = current;
             child.constraints.push_back(constraint);
             
+
             // logger::print_constraints(child.constraints, "Added Constraints");
             
             // Replan path for affected agent
@@ -84,12 +85,18 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
             [&](const Agent& a) { return a.id == constraint.agent; });
             
             auto new_path = find_path(affected_agent, grid, child);
-            
+            if (new_path.empty()) {
+                logger::log_warning("Cannot find new path for agent " + std::to_string(constraint.agent));
+                continue;
+            }
+
             if (!new_path.empty()) {
+                logger::log_info("New path found for agent " + std::to_string(constraint.agent));
                 child.solution[constraint.agent] = new_path;
                 child.cost = calculate_sic(child);
                 open_list.push(child);
                 // print_node_info(child, "New Child Node Generated");
+
             } else {
                 logger::log_warning("Cannot find new path for agent " + std::to_string(constraint.agent) + 
                                  " that satisfies constraints");
@@ -114,11 +121,16 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
     // Check conflicts between all agent pairs
     for (int i = 0; i < t; ++i) {
         for (const auto& [agent1, path1] : node.solution) {
+            // 如果agent1已经到达终点，跳过
+            if (i >= path1.size()) continue;
+            
             for (const auto& [agent2, path2] : node.solution) {
                 if (agent1 >= agent2) continue;
+                // 如果agent2已经到达终点，跳过
+                if (i >= path2.size()) continue;
 
-                Vertex pos1 = i < path1.size() ? path1[i] : path1.back();
-                Vertex pos2 = i < path2.size() ? path2[i] : path2.back();
+                Vertex pos1 = path1[i];
+                Vertex pos2 = path2[i];
 
                 if (pos1 == pos2) {
                     constraints.emplace_back(agent1, pos1, i);  
@@ -126,9 +138,9 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
                     return constraints;
                 }
 
-                if (i < t - 1) {
-                    Vertex next_pos1 = (i + 1) < path1.size() ? path1[i + 1] : path1.back();
-                    Vertex next_pos2 = (i + 1) < path2.size() ? path2[i + 1] : path2.back();
+                if (i < t - 1 && i + 1 < path1.size() && i + 1 < path2.size()) {
+                    Vertex next_pos1 = path1[i + 1];
+                    Vertex next_pos2 = path2[i + 1];
 
                     // check swapping conflict
                     if (pos1 == next_pos2 && pos2 == next_pos1) {
@@ -137,7 +149,25 @@ std::vector<Constraint> CBS::generate_constraints(const CBSNode& node) {
                         return constraints;
                     }
 
+                    Vertex dir1 = next_pos1 - pos1;
+                    Vertex dir2 = next_pos2 - pos2;
+                    if(utils::isDiagonal(dir1) && utils::isDiagonal(dir2)) {
+                        if(pos1 + Vertex(dir1.x,0) == pos2 && Vertex(-dir1.x,dir1.y) == dir2) {
+                            constraints.emplace_back(agent1, next_pos1, i + 1);
+                            constraints.emplace_back(agent2, next_pos2, i + 1);
+                            return constraints;
+                        }
+
+                        if(pos1 + Vertex(0,dir1.y) == pos2 && Vertex(dir1.x, -dir1.y) == dir2) {
+                            constraints.emplace_back(agent1, next_pos1, i + 1);
+                            constraints.emplace_back(agent2, next_pos2, i + 1);
+                            return constraints;
+                        }
+                    }
+
+
                     // check following conflict
+
                     // if (next_pos1 == pos2) { // agent1 follows agent2
                     //     constraints.emplace_back(agent1, pos2, t+1);
                     //     constraints.emplace_back(agent2, pos2, t);

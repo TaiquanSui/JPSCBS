@@ -12,6 +12,10 @@ struct Vertex {
         return x == other.x && y == other.y;
     }
 
+    Vertex operator+(const Vertex& other) const {
+        return Vertex(x + other.x, y + other.y);
+    }
+
     Vertex operator-(const Vertex& other) const {
         return Vertex(x - other.x, y - other.y);
     }
