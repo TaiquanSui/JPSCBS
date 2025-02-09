@@ -7,40 +7,30 @@
 
 namespace {
     inline bool is_cycle_free(const std::shared_ptr<AStarNode>& current, const Vertex& point) {
+        // 从当前节点开始，沿着父节点指针向上遍历
         auto node = current;
-        
-        while (node && node->parent) {
-            // 检查当前节点到其父节点之间的路径段
-            const Vertex& curr_point = node->pos;
-            const Vertex& parent_point = node->parent->pos;
-            Vertex delta = utils::calculateDirection(parent_point, curr_point);
-            
-            // 检查这段路径上的每个点
-            Vertex temp = parent_point;
-            while (temp != curr_point) {
-                if (temp == point) {
-                    return false;  // 发现环路，立即返回
-                }
-                temp = Vertex(temp.x + delta.x, temp.y + delta.y);
+        while (node != nullptr) {
+            if (node->pos == point) {
+                return false;  // 发现环路
             }
-            if (curr_point == point) {
-                return false;  // 检查当前跳点
-            }
-            
             node = node->parent;
         }
-        
         return true;  // 没有发现环路
     }
 
     std::vector<Vertex> check_diagonal_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
         std::vector<Vertex> forced_neighbors;
+        Vertex from(x,y);
+        Vertex neighbour1(x - dx, y);
+        Vertex forced_neighbour1(x - dx, y + dy);
+        Vertex neighbour2(x, y - dy);
+        Vertex forced_neighbour2(x + dx, y - dy);
         
-        if (!utils::isWalkable(grid, x - dx, y) && utils::isWalkable(grid, x - dx, y + dy) && utils::isWalkable(grid, x, y+dy)) {
+        if (!utils::isWalkable(grid, from, neighbour1) && utils::isWalkable(grid, from, forced_neighbour1)) {
             forced_neighbors.push_back(Vertex(-dx, dy));
         }
 
-        if (!utils::isWalkable(grid, x, y - dy) && utils::isWalkable(grid, x + dx, y - dy) && utils::isWalkable(grid, x+dx, y)) {
+        if (!utils::isWalkable(grid, from, neighbour2) && utils::isWalkable(grid, from, forced_neighbour2)) {
             forced_neighbors.push_back(Vertex(dx, -dy));
         }
 
@@ -49,23 +39,39 @@ namespace {
 
     std::vector<Vertex> check_straight_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
         std::vector<Vertex> forced_neighbors;
+        Vertex from(x, y);
         
         if (dx != 0) {  // 垂直移动（南/北）
-            // 检查西边
-            if (!utils::isWalkable(grid, x, y - 1) && utils::isWalkable(grid, x + dx, y - 1) && utils::isWalkable(grid, x + dx, y)) {
+            Vertex neighbour1(x, y - 1);  // 西边邻居
+            Vertex forced_neighbour1(x + dx, y - 1);  // 西边的强制邻居
+            
+            if (!utils::isWalkable(grid, from, neighbour1) && 
+                utils::isWalkable(grid, from, forced_neighbour1)) {
                 forced_neighbors.push_back(Vertex(dx, -1));
             }
-            // 检查东边
-            if (!utils::isWalkable(grid, x, y + 1) && utils::isWalkable(grid, x + dx, y + 1) && utils::isWalkable(grid, x + dx, y)) {
+            
+            Vertex neighbour2(x, y + 1);  // 东边邻居
+            Vertex forced_neighbour2(x + dx, y + 1);  // 东边的强制邻居
+            
+            if (!utils::isWalkable(grid, from, neighbour2) && 
+                utils::isWalkable(grid, from, forced_neighbour2)) {
                 forced_neighbors.push_back(Vertex(dx, 1));
             }
-        } else {        // 水平移动（东/西）
-            // 检查北边
-            if (!utils::isWalkable(grid, x - 1, y) && utils::isWalkable(grid, x - 1, y + dy) && utils::isWalkable(grid, x, y + dy)) {
+            
+        } else {  // 水平移动（东/西）
+            Vertex neighbour1(x - 1, y);  // 北边邻居
+            Vertex forced_neighbour1(x - 1, y + dy);  // 北边的强制邻居
+            
+            if (!utils::isWalkable(grid, from, neighbour1) && 
+                utils::isWalkable(grid, from, forced_neighbour1)) {
                 forced_neighbors.push_back(Vertex(-1, dy));
             }
-            // 检查南边
-            if (!utils::isWalkable(grid, x + 1, y) && utils::isWalkable(grid, x + 1, y + dy) && utils::isWalkable(grid, x, y + dy)) {
+            
+            Vertex neighbour2(x + 1, y);  // 南边邻居
+            Vertex forced_neighbour2(x + 1, y + dy);  // 南边的强制邻居
+            
+            if (!utils::isWalkable(grid, from, neighbour2) && 
+                utils::isWalkable(grid, from, forced_neighbour2)) {
                 forced_neighbors.push_back(Vertex(1, dy));
             }
         }
@@ -81,7 +87,7 @@ namespace {
         // If starting node, explore all 8 directions
         if (!current->parent) {
             for (const auto& move : Action::DIRECTIONS_8) {
-                if (utils::isWalkable(grid, pos.x + move.x, pos.y + move.y)) {
+                if (utils::isWalkable(grid, pos, Vertex(pos.x + move.x, pos.y + move.y))) {
                     neighbors.push_back(move);
                 }
             }
@@ -92,18 +98,22 @@ namespace {
         Vertex dir = utils::calculateDirection(current->parent->pos, current->pos);
 
         // 1. Current diagonal direction
-        if (utils::isWalkable(grid, pos.x + dir.x, pos.y + dir.y)) {
+        if (utils::isWalkable(grid, pos, Vertex(pos.x + dir.x, pos.y + dir.y))) {
                 neighbors.push_back(dir);
             }
         
         // Forced neighbors
         if (utils::isDiagonal(dir)) {
-            neighbors.push_back(Vertex(dir.x, 0));
-            neighbors.push_back(Vertex(0, dir.y));
+            if (utils::isWalkable(grid, pos, Vertex(pos.x + dir.x, pos.y))) {
+                neighbors.push_back(Vertex(dir.x, 0));
+            }
+            if (utils::isWalkable(grid, pos, Vertex(pos.x, pos.y + dir.y))) {
+                neighbors.push_back(Vertex(0, dir.y));
+            }
             auto forced = check_diagonal_forced(grid, pos.x, pos.y, dir.x, dir.y);
             neighbors.insert(neighbors.end(), forced.begin(), forced.end());
-        } else {
 
+        } else {
             auto forced = check_straight_forced(grid, pos.x, pos.y, dir.x, dir.y);
             neighbors.insert(neighbors.end(), forced.begin(), forced.end());
         }
@@ -123,14 +133,10 @@ namespace {
 
         // 2: if n is an obstacle or is outside the grid then
         // 3: return null
-        if (!utils::isWalkable(grid, next.x, next.y)) {
+        if (!utils::isWalkable(grid, Vertex(x,y), next)) {
             // logger::log_info(base_info.str() + " - Jump point rejected: (" + 
             //                std::to_string(next.x) + "," + std::to_string(next.y) + 
             //                ") - obstacle or outside grid");
-            return Vertex(-1, -1);
-        }
-
-        if (!is_cycle_free(current, next)) {
             return Vertex(-1, -1);
         }
 
@@ -141,6 +147,10 @@ namespace {
             //                std::to_string(next.x) + "," + std::to_string(next.y) + 
             //                ") - goal reached");
             return next;
+        }
+
+        if (!is_cycle_free(current, next)) {
+            return Vertex(-1, -1);
         }
     
         // 6: if ∃ n′ ∈ neighbours(n) s.t. n′ is forced then
@@ -373,12 +383,17 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
             // ss << "Full path: ";
             // for (size_t i = 0; i < path.path.size(); ++i) {
             //     ss << "(" << path.path[i].x << "," << path.path[i].y << ")";
-            //     if (i < path.path.size() - 1) ss << " -> ";
+            //     if (i < path.path.size() - 1) ss << ",";
             // }
             // ss << std::endl;
+
+            
+            // double cost = utils::calculate_path_cost(path.path);
+            // ss << "Cost: " << cost << std::endl;
             
             // // Print jump points
             // ss << "Jump points: ";
+
             // for (size_t i = 0; i < path.jump_points.size(); ++i) {
             //     ss << "(" << path.jump_points[i].x << "," << path.jump_points[i].y << ")";
             //     if (i < path.jump_points.size() - 1) ss << " -> ";

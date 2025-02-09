@@ -71,7 +71,12 @@ public:
         JPSCBS* solver2,
         int cpu_core = -1);
 
-private:
+    static std::string get_project_root();
+    static std::string make_scen_path(const std::string& scen_dir, 
+                                    const std::string& map_name,
+                                    const std::string& type,
+                                    int index);
+
     template<typename Solver>
     static std::vector<BenchmarkResult> run_scen_file_impl(
         const std::string& map_file,
@@ -82,14 +87,11 @@ private:
     template<typename Solver>
     static std::vector<BenchmarkResult> run_all_scenarios_impl(const std::string& map_path, Solver* solver);
 
+private:
+
     // 辅助函数
-    static std::string get_project_root();
     static std::vector<std::string> get_all_map_paths();
     static std::string get_map_name(const std::string& map_path);
-    static std::string make_scen_path(const std::string& scen_dir, 
-                                    const std::string& map_name,
-                                    const std::string& type,
-                                    int index);
          
     static void print_result(const std::string& map_file, 
                            const std::string& scen_file,

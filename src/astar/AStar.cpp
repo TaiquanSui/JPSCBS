@@ -24,7 +24,7 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
     // 记录开始时间
     auto start_time = std::chrono::steady_clock::now();
 
-    if(!utils::isWalkable(grid, start) || !utils::isWalkable(grid, goal)) {
+    if(!utils::isPassable(grid, start) || !utils::isPassable(grid, goal)) {
         return {};
     }
     std::priority_queue<std::shared_ptr<AStarNode>, 
@@ -57,13 +57,15 @@ std::vector<Vertex> a_star(const Vertex& start, const Vertex& goal,
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
             // logger::log_info("Path found: " + logger::vectorToString(path));
+            // double cost = utils::calculate_path_cost(path);
+            // logger::log_info("Cost: " + std::to_string(cost));
             return path;
         }
 
         for (const auto& move : Action::MOVEMENTS_9) {
             Vertex next_pos(current->pos.x + move.x, current->pos.y + move.y);
 
-            if (!utils::isWalkable(grid, next_pos)) {
+            if (!utils::isWalkable(grid, current->pos, next_pos)) {
                 continue;
             }
 
@@ -101,12 +103,12 @@ std::vector<Vertex> a_star(int agent_id,
                           const Vertex& goal,
                           const std::vector<std::vector<int>>& grid,
                           const std::vector<Constraint>& constraints,
-                          int start_time,
+                          const int start_time,
                           const ConflictAvoidanceTable& cat) {
     // 记录开始时间
     auto search_start_time = std::chrono::steady_clock::now();
 
-    if(!utils::isWalkable(grid, start) || !utils::isWalkable(grid, goal)) {
+    if(!utils::isPassable(grid, start) || !utils::isPassable(grid, goal)) {
         return {};
     }
 
@@ -149,7 +151,7 @@ std::vector<Vertex> a_star(int agent_id,
             Vertex next_pos(current->pos.x + move.x, current->pos.y + move.y);
             int next_time = current->time + 1;
 
-            if (!utils::isWalkable(grid, next_pos)) {
+            if (!utils::isWalkable(grid, current->pos, next_pos)) {
                 continue;
             }
 

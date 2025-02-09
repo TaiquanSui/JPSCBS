@@ -9,42 +9,10 @@
 
 
 namespace utils {
-    inline bool isWalkable(const std::vector<std::vector<int>>& grid, const Vertex& pos) {
-        return pos.x >= 0 && pos.x < grid.size() && 
-               pos.y >= 0 && pos.y < grid[0].size() && 
-               grid[pos.x][pos.y] == 0;
-    }
-
-    inline bool isWalkable(const std::vector<std::vector<int>>& grid, int x, int y) {
-        return x >= 0 && x < grid.size() && 
-               y >= 0 && y < grid[0].size() && 
-               grid[x][y] == 0;
-    }
-
-    inline int chebyshevDistance(const Vertex& a, const Vertex& b) {
-        return std::max(std::abs(a.x - b.x), std::abs(a.y - b.y));
-    }
-
-    inline double euclideanDistance(const Vertex& a, const Vertex& b) {
-        return std::sqrt(std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2));
-    }
-
-    inline double octileDistance(const Vertex& a, const Vertex& b) {
-        int dx = std::abs(a.x - b.x);
-        int dy = std::abs(a.y - b.y);
-        return std::sqrt(2.0) * std::min(dx, dy) + std::max(dx, dy) - std::min(dx, dy);
-    }
-
     inline Vertex calculateDirection(const Vertex& from, const Vertex& to) {
         int dx = (to.x > from.x) ? 1 : ((to.x < from.x) ? -1 : 0);
         int dy = (to.y > from.y) ? 1 : ((to.y < from.y) ? -1 : 0);
         return Vertex(dx, dy);
-    }
-
-    inline double getMoveCost(const Vertex& from, const Vertex& to) {
-        int dx = std::abs(to.x - from.x);
-        int dy = std::abs(to.y - from.y);
-        return (dx && dy && dx == dy) ? dx * std::sqrt(2.0) : (dx + dy);
     }
 
     inline bool isDiagonal(const Vertex& from, const Vertex& to) {
@@ -63,6 +31,50 @@ namespace utils {
 
     inline bool isStraight(const Vertex& dir) {
         return (dir.x == 0 && dir.y != 0) || (dir.x != 0 && dir.y == 0);
+    }
+
+    inline bool isPassable (const std::vector<std::vector<int>>& grid, const Vertex& pos) {
+        return pos.x >= 0 && pos.x < grid.size() && 
+               pos.y >= 0 && pos.y < grid[0].size() && 
+               grid[pos.x][pos.y] == 0;
+    }
+
+    inline bool isPassable(const std::vector<std::vector<int>>& grid, int x, int y) {
+        return x >= 0 && x < grid.size() && 
+               y >= 0 && y < grid[0].size() && 
+               grid[x][y] == 0;
+    }
+
+    inline bool isWalkable(const std::vector<std::vector<int>>& grid, const Vertex& from, const Vertex& to) {
+        if (!isPassable(grid, to)) return false;
+        if (!isPassable(grid, from)) return false;
+        Vertex dir = to-from;
+        if (isDiagonal(dir) 
+        && !isPassable(grid, from.x + dir.x, from.y) 
+        && !isPassable(grid, from.x, from.y + dir.y)){
+            return false;
+        }
+        return true;
+    }
+
+    inline int chebyshevDistance(const Vertex& a, const Vertex& b) {
+        return std::max(std::abs(a.x - b.x), std::abs(a.y - b.y));
+    }
+
+    inline double euclideanDistance(const Vertex& a, const Vertex& b) {
+        return std::sqrt(std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2));
+    }
+
+    inline double octileDistance(const Vertex& a, const Vertex& b) {
+        int dx = std::abs(a.x - b.x);
+        int dy = std::abs(a.y - b.y);
+        return std::sqrt(2.0) * std::min(dx, dy) + std::max(dx, dy) - std::min(dx, dy);
+    }
+
+    inline double getMoveCost(const Vertex& from, const Vertex& to) {
+        int dx = std::abs(to.x - from.x);
+        int dy = std::abs(to.y - from.y);
+        return (dx && dy && dx == dy) ? dx * std::sqrt(2.0) : (dx + dy);
     }
 
     inline bool validatePath(const std::vector<Vertex>& path, 
@@ -87,7 +99,7 @@ namespace utils {
             }
             
             // Check if crossing walls
-            if (!isWalkable(grid, next.x, next.y)) {
+            if (!isWalkable(grid, current, next)) {
                 return false;
             }
         }

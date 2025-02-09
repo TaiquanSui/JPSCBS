@@ -39,6 +39,9 @@ file(GLOB_RECURSE PROJECT_SOURCES
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/CBSBenchmark\\.cpp$")
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/JPSCBSBenchmark\\.cpp$")
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/Benchmark\\.cpp$")
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/CBSSingleTest\\.cpp$")
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/JPSCBSSingleTest\\.cpp$")
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/GenerateComparisonSummary\\.cpp$")
 
 # 创建库
 add_library(project_lib ${PROJECT_SOURCES})
@@ -56,4 +59,14 @@ target_link_libraries(jpscbs_benchmark PRIVATE project_lib)
 
 add_executable(comparison_benchmark benchmark/Benchmark.cpp)
 target_link_libraries(comparison_benchmark PRIVATE project_lib)
+
+add_executable(jpscbs_single_test benchmark/JPSCBSSingleTest.cpp)
+target_link_libraries(jpscbs_single_test PRIVATE project_lib)
+
+add_executable(cbs_single_test benchmark/CBSSingleTest.cpp)
+target_link_libraries(cbs_single_test PRIVATE project_lib)
+
+add_executable(generate_comparison_summary benchmark/GenerateComparisonSummary.cpp)
+target_link_libraries(generate_comparison_summary PRIVATE project_lib)
+
 

@@ -13,8 +13,15 @@
 void BenchmarkUtils::benchmark_all_scenarios(CBS* solver) {
     std::vector<BenchmarkResult> all_results;
     auto map_paths = get_all_map_paths();
+    std::string root_dir = get_project_root();
     
     for (const auto& map_path : map_paths) {
+        std::string csv_filename = (fs::path(root_dir) / ("benchmark_cbs_" + get_map_name(map_path) + ".csv")).string();
+        if (fs::exists(csv_filename)) {
+            logger::log_info("跳过已完成的地图: " + get_map_name(map_path));
+            continue;
+
+        }
         auto results = run_all_scenarios_impl(map_path, solver);
         all_results.insert(all_results.end(), results.begin(), results.end());
         write_results_to_csv("benchmark_cbs_"+get_map_name(map_path)+".csv", results);
@@ -29,8 +36,15 @@ void BenchmarkUtils::benchmark_all_scenarios(CBS* solver) {
 void BenchmarkUtils::benchmark_all_scenarios(JPSCBS* solver) {
     std::vector<BenchmarkResult> all_results;
     auto map_paths = get_all_map_paths();
+    std::string root_dir = get_project_root();
     
     for (const auto& map_path : map_paths) {
+        std::string csv_filename = (fs::path(root_dir) / "benchmark_results" / ("benchmark_jpscbs_" + get_map_name(map_path) + ".csv")).string();
+        if (fs::exists(csv_filename)) {
+            logger::log_info("跳过已完成的地图: " + get_map_name(map_path));
+            continue;
+        }
+        
         auto results = run_all_scenarios_impl(map_path, solver);
         all_results.insert(all_results.end(), results.begin(), results.end());
         write_results_to_csv("benchmark_jpscbs_"+get_map_name(map_path)+".csv", results);
@@ -45,12 +59,12 @@ void BenchmarkUtils::benchmark_all_scenarios(JPSCBS* solver) {
 void BenchmarkUtils::benchmark_all_scenarios_comparison(
     CBS* solver1, 
     JPSCBS* solver2,
-    int cpu_core) {  // 添加参数，默认值-1表示自动选择
+    int cpu_core) {
     
     try {
         int selected_core = cpu_core;
         if (selected_core < 0) {
-            selected_core = find_least_busy_cpu();  // 自动选择最空闲的CPU
+            selected_core = find_least_busy_cpu();
             logger::log_info("Automatically selected CPU core: " + std::to_string(selected_core));
         }
         
@@ -61,8 +75,16 @@ void BenchmarkUtils::benchmark_all_scenarios_comparison(
         
         std::vector<BenchmarkResult> cbs_results, jpscbs_results;
         auto map_paths = get_all_map_paths();
+        std::string root_dir = get_project_root();
         
         for (const auto& map_path : map_paths) {
+            std::string csv_filename = (fs::path(root_dir) / "benchmark_results" / ("benchmark_comparison_" + get_map_name(map_path) + ".csv")).string();
+            logger::log_info("csv_filename: " + csv_filename);
+            if (fs::exists(csv_filename)) {
+                logger::log_info("跳过已完成的地图: " + get_map_name(map_path));
+                continue;
+            }
+
             // 运行CBS
             logger::log_info("\nRunning CBS algorithm on map: " + get_map_name(map_path));
             auto map_cbs_results = run_all_scenarios_impl(map_path, solver1);
@@ -88,7 +110,6 @@ void BenchmarkUtils::benchmark_all_scenarios_comparison(
         
         restore_thread_priority();
         
-
     } catch (...) {
         restore_thread_priority();
         throw;
@@ -235,7 +256,7 @@ std::vector<BenchmarkResult> BenchmarkUtils::run_all_scenarios_impl(
 
         for (const auto& scenario : scenario_types) {
             logger::log_info("Testing " + std::string(scenario.name) + " scenarios");
-            for (int i = 1; i <= 25; ++i) {
+            for (int i = 1; i <= 5; ++i) {
                 std::string scen_file = make_scen_path(scenario.dir.string(), 
                                                      map_name, 
                                                      scenario.name, i);

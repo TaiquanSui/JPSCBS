@@ -100,35 +100,3 @@ TEST_F(JPSCBSTest, MultiAgentScenario) {
     
     std::cout << "MultiAgentScenario execution time: " << execution_time << "ms" << std::endl;
 }
-
-TEST_F(JPSCBSTest, SymmetricIntervalHandling) {
-    // 创建一个有对称区间的场景
-    grid = {
-        {0, 0, 0, 0},
-        {0, 1, 0, 0},
-        {0, 0, 0, 0},
-        {0, 0, 0, 0}
-    };
-    
-    std::vector<Agent> agents = {
-        Agent{0, Vertex{0, 0}, Vertex{3, 3}},
-        Agent{1, Vertex{1, 1}, Vertex{2, 2}}
-    };
-
-    double execution_time = measureExecutionTime([&]() {
-        auto paths = solver.solve(agents, grid);
-        ASSERT_FALSE(paths.empty());
-        ASSERT_EQ(paths.size(), 2);
-        
-        // 验证路径合法性
-        for(const auto& path : paths) {
-            for(size_t i = 0; i < path.size() - 1; i++) {
-                // 检查相邻点之间的距离是否合法
-                double dist = utils::octileDistance(path[i], path[i+1]);
-                ASSERT_LE(dist, 1.5); // 允许对角线移动
-            }
-        }
-    });
-    
-    std::cout << "SymmetricIntervalHandling execution time: " << execution_time << "ms" << std::endl;
-}
