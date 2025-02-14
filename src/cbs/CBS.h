@@ -62,11 +62,7 @@ private:
     std::atomic<bool> interrupted{false};  // 内部中断状态
             
     std::vector<Constraint> generate_constraints(const CBSNode& node);
-    std::vector<Vertex> find_path(const Agent& agent,
-                                const std::vector<std::vector<int>>& grid,
-                                const CBSNode& node);
-    bool find_bypass(CBSNode& node, const std::vector<Agent>& agents, 
-                     const std::vector<Constraint>& constraints,
+    bool find_bypass(CBSNode& node, const std::vector<Constraint>& constraints, const std::vector<Agent>& agents, 
                      const std::vector<std::vector<int>>& grid);
     
     bool is_timeout() const;

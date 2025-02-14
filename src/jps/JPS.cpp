@@ -7,15 +7,24 @@
 
 namespace {
     inline bool is_cycle_free(const std::shared_ptr<AStarNode>& current, const Vertex& point) {
-        // 从当前节点开始，沿着父节点指针向上遍历
-        auto node = current;
-        while (node != nullptr) {
-            if (node->pos == point) {
+        // 检查从parent到current的完整路径
+        if (!current->parent) return true;
+        
+        // 获取从parent到current的完整路径
+        auto parent = current->parent;
+        Vertex dir = utils::calculateDirection(parent->pos, current->pos);
+        Vertex pos = parent->pos;
+        
+        // 检查路径上的每个点
+        while (pos != current->pos) {
+            if (pos == point) {
                 return false;  // 发现环路
             }
-            node = node->parent;
+            pos = Vertex(pos.x + dir.x, pos.y + dir.y);
         }
-        return true;  // 没有发现环路
+        
+        // 递归检查parent的路径
+        return is_cycle_free(parent, point);
     }
 
     std::vector<Vertex> check_diagonal_forced(const std::vector<std::vector<int>>& grid, int x, int y, int dx, int dy) {
@@ -252,7 +261,7 @@ namespace {
             // 预计算路径长度并预分配内存
             size_t path_length = 1;  // 起点
             for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
-                path_length += 2*utils::octileDistance(all_jump_points[i], all_jump_points[i + 1]);
+                path_length += utils::octileDistance(all_jump_points[i], all_jump_points[i + 1]);
             }
             path.reserve(path_length);
 
@@ -423,11 +432,20 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                 h_value,
                 current
             );
-            // logger::log_info("Generated successor node: (" + std::to_string(successor.x) + "," + 
-            //                std::to_string(successor.y) + "), g-value: " + 
-            //                std::to_string(tentative_g) + ", movement cost: " + 
-            //                std::to_string(move_cost) + ", h-value: " + 
-            //                std::to_string(h_value));
+            logger::log_info("Generated successor node: (" + std::to_string(successor.x) + "," + 
+                           std::to_string(successor.y) + "), g-value: " + 
+                           std::to_string(tentative_g) + ", movement cost: " + 
+                           std::to_string(move_cost) + ", h-value: " + 
+                           std::to_string(h_value));
+            auto node = current;
+            
+            std::stringstream ss;   
+            ss << "parents: ";
+            while (node) {
+                ss << "(" << node->pos.x << "," << node->pos.y << ")";
+                node = node->parent;
+            }
+            logger::log_info(ss.str());
             state.open_list.push(next_node);
         }
     }

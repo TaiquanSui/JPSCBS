@@ -24,6 +24,12 @@ struct JPSCBSNode {
     double cost;
 
     JPSCBSNode() : cost(0.0) {}
+
+    JPSCBSNode(const JPSCBSNode& other) 
+        : solution(other.solution)  // priority_queue会执行深拷贝
+        , constraints(other.constraints)  // vector会执行深拷贝
+        , cost(other.cost) 
+    {}
 };
 
 struct JPSCBSNodeComparator {
