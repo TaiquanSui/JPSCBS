@@ -89,6 +89,9 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
                 continue;
             }
 
+            // logger resolve conflict
+            logger::log_info("Resolved conflict: " + bypass_path.first.toString());
+
             update_solutions(agents, *new_node);
             validate_and_repair_solutions(agents, *new_node);
             // print_node_info(*new_node, "New Node");
@@ -155,7 +158,7 @@ void JPSCBS::update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node
                node_solutions_cost >= solutions_cost) {
             
             // Continue searching for a new path
-            //logger::log_info("continue searching for a new path, agent_id: " + std::to_string(agent_id));
+            logger::log_info("continue searching for a new path, agent_id: " + std::to_string(agent_id));
             JPSPath new_path = search_by_jps(agents[agent_id]);
             
             if (!new_path.path.empty()) {
@@ -207,7 +210,7 @@ double JPSCBS::calculate_sic(const JPSCBSNode& node) {
 
 
 void JPSCBS::validate_and_repair_solutions(const std::vector<Agent>& agents, JPSCBSNode& node) {
-    //logger::log_info("Starting to validate and repair paths");
+    logger::log_info("Starting to validate and repair paths");
 
     for (const auto& agent : agents) {
         if (node.solution.find(agent.id) == node.solution.end()) {
@@ -234,7 +237,7 @@ void JPSCBS::validate_and_repair_solutions(const std::vector<Agent>& agents, JPS
                 break;
             } 
 
-            // //logger::log_info("Agent " + std::to_string(agent.id) + " path violates constraints, attempting repair");
+            logger::log_info("Agent " + std::to_string(agent.id) + " path violates constraints, attempting repair");
             
             for (const auto& constraint : violated_constraints) {
                 auto constraint_infos = collect_constraint_infos(node, {constraint});

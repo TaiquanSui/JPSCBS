@@ -112,9 +112,9 @@ std::vector<Agent> load_scen(const std::string& filename, const std::vector<std:
         // 先验证起点到终点是否可达
         Vertex start(start_x, start_y);
         Vertex goal(goal_x, goal_y);
-        // if(grid[start_y][start_x] == 1 || grid[goal_y][goal_x] == 1) {
-        //     continue;
-        // }
+        if(grid[start_y][start_x] == 1 || grid[goal_y][goal_x] == 1) {
+            continue;
+        }
         
         auto path = a_star(start, goal, grid);
         if (!path.empty()) {

@@ -7,9 +7,9 @@ namespace fs = std::filesystem;
 int main() {
     try {
         // 指定要测试的地图和场景
-        std::string map_name = "brc202d";
+        std::string map_name = "Boston_0_256";
         std::string scenario_type = "even";  // 或 "random"
-        int scenario_number = 1;  // 场景编号 1-25
+        int scenario_number = 3;  // 场景编号 1-25
 
         // 初始化求解器
         auto jpscbs = std::make_unique<JPSCBS>();

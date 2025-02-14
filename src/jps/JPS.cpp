@@ -362,6 +362,9 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
     auto start_time = std::chrono::steady_clock::now();
     const int MAX_SEARCH_TIME = 30;  // 最大搜索时间（秒）
 
+    std::vector<std::shared_ptr<AStarNode>> closed_list;
+    std::vector<std::shared_ptr<AStarNode>> temp_nodes;
+
     while (!state.open_list.empty()) {
         // 检查是否超时
         auto current_time = std::chrono::steady_clock::now();
@@ -373,7 +376,7 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
 
         auto current = state.open_list.top();
         state.open_list.pop();
-        state.closed_list.push_back(current);
+        closed_list.push_back(current);
 
         // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," + 
         //                std::to_string(current->pos.y) + "), g-value: " + 
@@ -382,6 +385,13 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
 
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
+            // 将所有temp_nodes放回open_list以备下次搜索
+            for (auto& node : temp_nodes) {
+                state.open_list.push(node);
+            }
+            state.closed_list.insert(state.closed_list.end(), 
+                                    std::make_move_iterator(closed_list.begin()), 
+                                    std::make_move_iterator(closed_list.end()));
             
             // // Add log information
             // std::stringstream ss;
@@ -422,6 +432,12 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
         
         // Expand current node
         for (const auto& successor : successors) {
+            // 检查successor是否在closed list中
+            auto it = std::find_if(closed_list.begin(), closed_list.end(),
+                [&successor](const std::shared_ptr<AStarNode>& closed_node) {
+                    return closed_node->pos == successor;
+                });
+                
             double move_cost = utils::getMoveCost(current->pos, successor);
             double tentative_g = current->g + move_cost;
             double h_value = heuristic(successor, goal);
@@ -432,21 +448,28 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                 h_value,
                 current
             );
-            logger::log_info("Generated successor node: (" + std::to_string(successor.x) + "," + 
-                           std::to_string(successor.y) + "), g-value: " + 
-                           std::to_string(tentative_g) + ", movement cost: " + 
-                           std::to_string(move_cost) + ", h-value: " + 
-                           std::to_string(h_value));
-            auto node = current;
+            // logger::log_info("Generated successor node: (" + std::to_string(successor.x) + "," + 
+            //                std::to_string(successor.y) + "), g-value: " + 
+            //                std::to_string(tentative_g) + ", movement cost: " + 
+            //                std::to_string(move_cost) + ", h-value: " + 
+            //                std::to_string(h_value));
+            // auto node = current;
             
-            std::stringstream ss;   
-            ss << "parents: ";
-            while (node) {
-                ss << "(" << node->pos.x << "," << node->pos.y << ")";
-                node = node->parent;
+            // std::stringstream ss;   
+            // ss << "parents: ";
+            // while (node) {
+            //     ss << "(" << node->pos.x << "," << node->pos.y << ")";
+            //     node = node->parent;
+            // }
+            // logger::log_info(ss.str());
+            
+            // 如果在closed list中，放入temp_nodes
+            if (it != closed_list.end()) {
+                temp_nodes.push_back(next_node);
+            } else {
+                // 否则直接加入open_list
+                state.open_list.push(next_node);
             }
-            logger::log_info(ss.str());
-            state.open_list.push(next_node);
         }
     }
 
