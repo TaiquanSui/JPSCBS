@@ -7,10 +7,10 @@ namespace fs = std::filesystem;
 int main() {
     try {
         // 指定要测试的地图和场景
-        std::string map_name = "brc202d";
-        std::string scenario_type = "even";  // 或 "random"
-        int scenario_number = 1;  // 场景编号 1-25
-        
+        std::string map_name = "Berlin_1_256";
+        std::string scenario_type = "random";  // 或 "random"
+        int scenario_number = 5;  // 场景编号 1-25
+
         // 初始化求解器
         auto cbs = std::make_unique<CBS>();
         cbs->set_time_limit(30.0);

@@ -121,7 +121,7 @@ private:
     
     bool resolve_conflict_locally(JPSCBSNode& node,
                                 const ConstraintInfo& constraint_info,
-                                const std::vector<Vertex>& bypass_paths);
+                                const std::vector<Vertex>& local_path);
     double calculate_sic(const JPSCBSNode& node);
 
 

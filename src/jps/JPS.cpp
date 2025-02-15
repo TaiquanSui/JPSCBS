@@ -226,50 +226,52 @@ namespace {
     
     JPSPath reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
         // 1. Collect jump points and build basic path
-        std::vector<Vertex> all_jump_points;
+        std::vector<Vertex> all_turning_points;
         std::vector<Vertex> path;
         {
             auto node = goal_node;
             while (node) {
-                all_jump_points.push_back(node->pos);
+                all_turning_points.push_back(node->pos);
                 node = node->parent;
             }
-            std::reverse(all_jump_points.begin(), all_jump_points.end());
+            std::reverse(all_turning_points.begin(), all_turning_points.end());
         }
 
         // 移除方向相同的中间跳点
-        if (all_jump_points.size() > 2) {
+        if (all_turning_points.size() > 2) {
             std::vector<Vertex> filtered_jump_points;
-            filtered_jump_points.reserve(all_jump_points.size());  // 预分配内存
-            filtered_jump_points.push_back(all_jump_points[0]);  // 始终保留起点
+            filtered_jump_points.reserve(all_turning_points.size());  // 预分配内存
+            filtered_jump_points.push_back(all_turning_points[0]);  // 始终保留起点
 
-            for (size_t i = 1; i < all_jump_points.size() - 1; ++i) {
-                Vertex prev_dir = utils::calculateDirection(all_jump_points[i-1], all_jump_points[i]);
-                Vertex next_dir = utils::calculateDirection(all_jump_points[i], all_jump_points[i+1]);
-                
-                if (prev_dir.x != next_dir.x || prev_dir.y != next_dir.y) {
-                    filtered_jump_points.push_back(all_jump_points[i]);
+            for (size_t i = 1; i < all_turning_points.size() - 1; ++i) {
+                Vertex prev_dir = utils::calculateDirection(all_turning_points[i-1], all_turning_points[i]);
+                Vertex next_dir = utils::calculateDirection(all_turning_points[i], all_turning_points[i+1]);
+
+                if (prev_dir != next_dir) {
+                    filtered_jump_points.push_back(all_turning_points[i]);
                 }
             }
 
-            filtered_jump_points.push_back(all_jump_points.back());  // 始终保留终点
-            all_jump_points = std::move(filtered_jump_points);  // 使用移动语义
+            filtered_jump_points.push_back(all_turning_points.back());  // 始终保留终点
+            all_turning_points = std::move(filtered_jump_points);  // 使用移动语义
         }
+        // logger::log_info("All turning points: " + logger::vectorToString(all_turning_points));
+
 
         // 2. Build full path (insert intermediate points between jump points)
-        if (!all_jump_points.empty()) {
+        if (!all_turning_points.empty()) {
             // 预计算路径长度并预分配内存
             size_t path_length = 1;  // 起点
-            for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
-                path_length += utils::octileDistance(all_jump_points[i], all_jump_points[i + 1]);
+            for (size_t i = 0; i < all_turning_points.size() - 1; ++i) {
+                path_length += utils::octileDistance(all_turning_points[i], all_turning_points[i + 1]) + 1;
             }
             path.reserve(path_length);
 
-            for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
-                const Vertex& curr_point = all_jump_points[i];
-                const Vertex& next_point = all_jump_points[i + 1];
+            for (size_t i = 0; i < all_turning_points.size() - 1; ++i) {
+                const Vertex& curr_point = all_turning_points[i];
+                const Vertex& next_point = all_turning_points[i + 1];
                 Vertex delta = utils::calculateDirection(curr_point, next_point);
-    
+
                 // Add all points between current jump point and next jump point
                 Vertex curr = curr_point;
                 while (curr != next_point) {
@@ -277,81 +279,71 @@ namespace {
                     curr = Vertex(curr.x + delta.x, curr.y + delta.y);
                 }
             }
-            path.push_back(all_jump_points.back());  // Add goal
+            path.push_back(all_turning_points.back());  // Add goal
         }
-    
-        // 3. Identify symmetric intervals and key jump points
-        std::vector<Vertex> jump_points;
-        std::vector<Interval> possible_intervals;
-        jump_points.reserve(all_jump_points.size());
-        possible_intervals.reserve(all_jump_points.size() / 2);
 
-        for (size_t i = 0; i < all_jump_points.size() - 1; ++i) {
-            // 先检查单个（对角线-直线）模式
-            if (i + 2 < all_jump_points.size()) {
-                const auto& current = all_jump_points[i];
-                const auto& next = all_jump_points[i + 1];
-                const auto& next2 = all_jump_points[i + 2];
-                
-                Vertex dir1 = utils::calculateDirection(current, next);
-                Vertex dir2 = utils::calculateDirection(next, next2);
-                
-                if (utils::isDiagonal(dir1) && utils::isStraight(dir2)) {
-                    // 对于对称区间，添加起点
-                    jump_points.push_back(current);
-                    
-                    // 找到一个（对角线-直线）模式
-                    std::vector<Vertex> interval_points;
-                    interval_points.reserve(3);
-                    interval_points.push_back(current);
-                    interval_points.push_back(next);
-                    interval_points.push_back(next2);
-                    
-                    // 继续检查后续是否有相同的模式
-                    size_t j = i + 2;
-                    while (j + 2 < all_jump_points.size()) {
-                        const auto& pattern_start = all_jump_points[j];
-                        const auto& pattern_mid = all_jump_points[j + 1];
-                        const auto& pattern_end = all_jump_points[j + 2];
-                        
-                        Vertex pattern_dir1 = utils::calculateDirection(pattern_start, pattern_mid);
-                        Vertex pattern_dir2 = utils::calculateDirection(pattern_mid, pattern_end);
-                        
-                        // 检查是否是相同的模式
-                        if (utils::isDiagonal(pattern_dir1) && utils::isStraight(pattern_dir2) &&
-                            pattern_dir1 == dir1 && pattern_dir2 == dir2) {
-                            // 添加到当前区间
-                            interval_points.push_back(pattern_mid);
-                            interval_points.push_back(pattern_end);
-                            j += 2;
-                        } else {
-                            break;
-                        }
-                    }
-                    
-                    // 记录找到的区间
-                    possible_intervals.emplace_back(interval_points);
-                    
-                    // 更新索引到区间终点，下一轮从这里开始寻找新的对称区间
-                    i = j;
-                    continue;
+        // 3. Identify symmetric intervals and key jump points
+        std::vector<Vertex> turning_points;
+        std::vector<Interval> possible_intervals;
+        turning_points.reserve(all_turning_points.size());
+        possible_intervals.reserve(all_turning_points.size() / 2);
+
+        for (size_t i = 0; i < all_turning_points.size(); ++i) {
+            // logger::log_info("Current point: (" + std::to_string(all_turning_points[i].x) + "," + std::to_string(all_turning_points[i].y) + ")");
+            // logger::log_info("Index: " + std::to_string(i));
+            turning_points.push_back(all_turning_points[i]);
+            
+            if (i + 2 >= all_turning_points.size()) {
+                continue;
+            }
+
+            const auto& current = all_turning_points[i];
+            const auto& next = all_turning_points[i + 1];
+            const auto& next2 = all_turning_points[i + 2];
+            Vertex dir1 = utils::calculateDirection(current, next);
+            Vertex dir2 = utils::calculateDirection(next, next2);
+
+            if (!utils::isDiagonal(dir1) || !utils::isStraight(dir2)) {
+                continue;
+            }
+
+            // 对于对称区间，添加起点
+            // 找到一个（对角线-直线）模式
+            std::vector<Vertex> interval_points;
+            interval_points.push_back(current);
+            interval_points.push_back(next);
+            interval_points.push_back(next2);
+
+            // 继续检查后续是否有相同的模式
+            size_t j = i + 2;
+            while (j + 2 < all_turning_points.size()) {
+                const auto& pattern_start = all_turning_points[j];
+                const auto& pattern_mid = all_turning_points[j + 1];
+                const auto& pattern_end = all_turning_points[j + 2];
+                Vertex pattern_dir1 = utils::calculateDirection(pattern_start, pattern_mid);
+                Vertex pattern_dir2 = utils::calculateDirection(pattern_mid, pattern_end);
+                // 检查是否是相同的模式
+                if (pattern_dir1 == dir1 && pattern_dir2 == dir2) {
+                    // 添加到当前区间
+                    interval_points.push_back(pattern_mid);
+                    interval_points.push_back(pattern_end);
+                    j += 2;
+                } else {
+                    break;
                 }
             }
-            
-            // 如果不是对称区间的起点，直接添加当前跳点
-            jump_points.push_back(all_jump_points[i]);
+
+            // logger::log_info("Interval points: " + logger::vectorToString(interval_points));
+            // 记录找到的区间
+            possible_intervals.emplace_back(interval_points);
+            // 更新索引到区间终点，下一轮从这里开始寻找新的对称区间
+            i = j - 1;
         }
 
-        // 添加最后一个跳点
-        if (!all_jump_points.empty()) {
-            jump_points.push_back(all_jump_points.back());
-        }
 
-        
-        return JPSPath(std::move(path), std::move(jump_points), std::move(possible_intervals));
-    }
-    
-    
+        return JPSPath(std::move(path), std::move(turning_points), std::move(possible_intervals));
+    }    
+
 }
 
 

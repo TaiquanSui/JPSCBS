@@ -405,7 +405,7 @@ BypassResult JPSCBS::find_bypass(JPSCBSNode& node,
 
 bool JPSCBS::resolve_conflict_locally(JPSCBSNode& node, 
                                     const ConstraintInfo& info,
-                                    const std::vector<Vertex>& bypass_paths) {
+                                    const std::vector<Vertex>& local_path) {
     // 原有的resolve_conflict_locally逻辑
     if (node.solution.find(info.constraint.agent) == node.solution.end()) {
         //logger::log_error("can't find agent " + std::to_string(info.constraint.agent) + " solution");
@@ -443,8 +443,8 @@ bool JPSCBS::resolve_conflict_locally(JPSCBSNode& node,
         size_t next_jp_index = info.jp2_jumps_index + 1;
         auto next_jp = current_path.jump_points[next_jp_index];  // 使用current_path而不是node中的路径
             
-        if (has_better_solution(bypass_paths, info.jp2, next_jp)) {
-            //logger::log_info("Could find better path");
+        if (has_better_solution(local_path, info.jp2, next_jp)) {
+            logger::log_info("Could find better path, abandoning jump point: (" + std::to_string(info.jp2.x) + "," + std::to_string(info.jp2.y) + ")");
             auto next_jp_path_index = std::distance(path.begin(), 
                                                     std::find(path.begin(), path.end(), next_jp));
             // Recursively try
@@ -464,11 +464,11 @@ bool JPSCBS::resolve_conflict_locally(JPSCBSNode& node,
         } else {
             // Use bypass path directly
             logger::log_info("No better path found, using bypass path");
-            update_path_with_local_solution(node, info, bypass_paths);
+            update_path_with_local_solution(node, info, local_path);
             return true;
         }
     }else{
-        update_path_with_local_solution(node, info, bypass_paths);
+        update_path_with_local_solution(node, info, local_path);
     }
     return true;
 }
@@ -616,7 +616,7 @@ void JPSCBS::print_node_info(const JPSCBSNode& node, const std::string& prefix) 
                 jump_points_str += "(" + std::to_string(jp.x) + "," + std::to_string(jp.y) + ") ";
             }
             logger::log_info("Agent " + std::to_string(agent_id) + " path: " + logger::vectorToString(paths.top().path));
-            // logger::log_info(jump_points_str);
+            logger::log_info(jump_points_str);
         }
     }
 
