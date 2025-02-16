@@ -143,18 +143,12 @@ namespace {
         // 2: if n is an obstacle or is outside the grid then
         // 3: return null
         if (!utils::isWalkable(grid, Vertex(x,y), next)) {
-            // logger::log_info(base_info.str() + " - Jump point rejected: (" + 
-            //                std::to_string(next.x) + "," + std::to_string(next.y) + 
-            //                ") - obstacle or outside grid");
             return Vertex(-1, -1);
         }
 
         // 4: if n = g then
         // 5: return n
         if (next == goal) {
-            // logger::log_info(base_info.str() + " - Jump point found: (" + 
-            //                std::to_string(next.x) + "," + std::to_string(next.y) + 
-            //                ") - goal reached");
             return next;
         }
 
@@ -166,9 +160,6 @@ namespace {
         // 7: return n
         if (dx != 0 && dy != 0) {  // Diagonal move
             if(!check_diagonal_forced(grid, next.x, next.y, dx, dy).empty()) {
-                // logger::log_info(base_info.str() + " - Jump point found: (" + 
-                //                std::to_string(next.x) + "," + std::to_string(next.y) + 
-                //                ") - diagonal forced neighbor");
                 return next;
             }
             // 8: if d~ is diagonal then
@@ -177,16 +168,10 @@ namespace {
             // 11: return n
             if (jump(next.x, next.y, dx, 0, current, grid, goal).x != -1 ||
                 jump(next.x, next.y, 0, dy, current, grid, goal).x != -1) {
-                    // logger::log_info(base_info.str() + " - Jump point found: (" + 
-                    //                std::to_string(next.x) + "," + std::to_string(next.y) + 
-                    //                ") - diagonal recursive check");
                 return next;
             }
         } else {
             if(!check_straight_forced(grid, next.x, next.y, dx, dy).empty()) {
-                // logger::log_info(base_info.str() + " - Jump point found: (" + 
-                //                std::to_string(next.x) + "," + std::to_string(next.y) + 
-                //                ") - straight forced neighbor");
                 return next;
             }
         }
@@ -336,7 +321,6 @@ namespace {
             // logger::log_info("Interval points: " + logger::vectorToString(interval_points));
             // 记录找到的区间
             possible_intervals.emplace_back(interval_points);
-            // 更新索引到区间终点，下一轮从这里开始寻找新的对称区间
             i = j - 1;
         }
 
@@ -469,6 +453,94 @@ JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                       std::to_string(start.x) + "," + std::to_string(start.y) + 
                       ") to (" + std::to_string(goal.x) + "," + std::to_string(goal.y) + ")");
     return JPSPath({}, {}, {});
+}
+
+// 定义静态成员变量
+const std::unordered_map<int, std::priority_queue<JPSPath, std::vector<JPSPath>, JPSPathComparator>>* JPSPathComparator::solution_context = nullptr;
+
+bool JPSPathComparator::operator()(const JPSPath& a, const JPSPath& b) const {
+    double a_cost = utils::calculate_path_cost(a.path);
+    double b_cost = utils::calculate_path_cost(b.path);
+    
+    if (std::abs(a_cost - b_cost) < 1e-6 && solution_context) {
+        int a_conflicts = evaluate_conflicts_with_all_combinations(a);
+        int b_conflicts = evaluate_conflicts_with_all_combinations(b);
+        
+        if (a_conflicts != b_conflicts) {
+            return a_conflicts > b_conflicts;
+        }
+        return &a > &b;
+    }
+    return a_cost > b_cost;
+}
+
+void JPSPathComparator::set_solution_context(const std::unordered_map<int, std::priority_queue<JPSPath, std::vector<JPSPath>, JPSPathComparator>>* ctx) {
+    solution_context = ctx;
+}
+
+int JPSPathComparator::evaluate_conflicts_with_all_combinations(const JPSPath& test_path) const {
+    if (!solution_context) return 0;
+    
+    // 收集其他agent的相同cost的路径
+    std::unordered_map<int, std::vector<const JPSPath*>> same_cost_paths;
+    for (const auto& [agent_id, paths] : *solution_context) {
+        if (paths.empty()) continue;
+        
+        // 获取该agent所有cost相同的路径
+        auto temp_queue = paths;
+        double first_cost = utils::calculate_path_cost(temp_queue.top().path);
+        
+        std::vector<const JPSPath*>& agent_paths = same_cost_paths[agent_id];
+        while (!temp_queue.empty()) {
+            const auto& current_path = temp_queue.top();
+            if (std::abs(utils::calculate_path_cost(current_path.path) - first_cost) > 1e-6) {
+                break;
+            }
+            
+            // 如果发现test_path，删除此agent的paths并跳出
+            if (&current_path == &test_path) {
+                same_cost_paths.erase(agent_id);
+                break;
+            }
+            
+            agent_paths.push_back(&current_path);
+            temp_queue.pop();
+        }
+    }
+    
+    // 计算所有可能组合中的最小冲突数
+    int min_conflicts = INT_MAX;
+    std::unordered_map<int, const JPSPath*> current_combination;
+    
+    std::function<void(std::unordered_map<int, std::vector<const JPSPath*>>::iterator)> try_combinations;
+    try_combinations = [&](auto it) {
+        if (it == same_cost_paths.end()) {
+            // 计算当前组合的冲突数
+            int conflicts = 0;
+            for (const auto& [id1, path1] : current_combination) {
+                conflicts += utils::count_conflicts(test_path.path, path1->path);
+                for (const auto& [id2, path2] : current_combination) {
+                    if (id1 < id2) {
+                        conflicts += utils::count_conflicts(path1->path, path2->path);
+                    }
+                }
+            }
+            min_conflicts = std::min(min_conflicts, conflicts);
+            return;
+        }
+        
+        // 尝试当前agent的每条路径
+        for (const auto* path : it->second) {
+            current_combination[it->first] = path;
+            try_combinations(std::next(it));
+        }
+    };
+    
+    if (!same_cost_paths.empty()) {
+        try_combinations(same_cost_paths.begin());
+    }
+    
+    return min_conflicts == INT_MAX ? 0 : min_conflicts;
 }
 
 

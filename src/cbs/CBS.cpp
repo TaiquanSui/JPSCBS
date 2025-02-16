@@ -36,7 +36,18 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
         root.cost += utils::calculate_path_cost(path);
     }
 
-    auto compare = [](const CBSNode& a, const CBSNode& b) { return a.cost > b.cost; };
+    auto compare = [this](const CBSNode& a, const CBSNode& b) { 
+        if (std::abs(a.cost - b.cost) < 1e-6) {
+            int a_conflicts = count_conflicts(a);
+            int b_conflicts = count_conflicts(b);
+            if (a_conflicts != b_conflicts) {
+                return a_conflicts > b_conflicts;
+            }
+            // FIFO, 使用内存地址作为稳定的排序依据
+            return &a > &b;
+        }
+        return a.cost > b.cost;
+    };
     std::priority_queue<CBSNode, std::vector<CBSNode>, decltype(compare)> open_list(compare);
     open_list.push(root);
 
@@ -303,8 +314,6 @@ int CBS::count_conflicts(const CBSNode& node) {
         ++it2;
         for (; it2 != solution.end(); ++it2) {
             total_conflicts += utils::count_conflicts(
-                it1->first,  // agent1_id
-                it2->first,  // agent2_id
                 it1->second, // path1
                 it2->second  // path2
             );

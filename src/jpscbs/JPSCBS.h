@@ -35,7 +35,31 @@ struct JPSCBSNode {
 struct JPSCBSNodeComparator {
     bool operator()(const std::shared_ptr<JPSCBSNode>& a, 
                    const std::shared_ptr<JPSCBSNode>& b) const {
+        if (std::abs(a->cost - b->cost) < 1e-6) {
+            // 使用非静态成员函数
+            int a_conflicts = count_conflicts(*a);
+            int b_conflicts = count_conflicts(*b);
+            if (a_conflicts != b_conflicts) {
+                return a_conflicts > b_conflicts;
+            }
+            // 使用内存地址作为稳定的排序依据
+            return a.get() > b.get();
+        }
         return a->cost > b->cost;
+    }
+
+private:
+    static int count_conflicts(const JPSCBSNode& node) {
+        int conflicts = 0;
+        for (const auto& [agent_id, paths] : node.solution) {
+            if (paths.empty()) continue;
+            const auto& path = paths.top().path;
+            for (const auto& [other_id, other_paths] : node.solution) {
+                if (other_id <= agent_id || other_paths.empty()) continue;
+                conflicts += utils::count_conflicts(path, other_paths.top().path);
+            }
+        }
+        return conflicts;
     }
 };
 
@@ -128,7 +152,9 @@ private:
     void update_path_with_local_solution(JPSCBSNode& node, const ConstraintInfo& info, const std::vector<Vertex>& local_path);
 
     bool has_better_solution(const std::vector<Vertex>& new_path, 
+                                  const Vertex& jp1,
                                   const Vertex& jp2, 
+                                  const Vertex& next_jp_decide,
                                   const Vertex& next_jp);
     
     int count_conflicts(const JPSCBSNode& node);

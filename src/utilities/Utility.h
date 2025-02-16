@@ -154,7 +154,6 @@ namespace utils {
     }
 
     inline int count_conflicts(
-        int agent1_id, int agent2_id,
         const std::vector<Vertex>& path1,
         const std::vector<Vertex>& path2
     ) {

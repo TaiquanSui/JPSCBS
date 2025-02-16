@@ -31,6 +31,9 @@ struct AStarNode {
 struct AStarNodeComparator {
     bool operator()(const std::shared_ptr<AStarNode>& a, const std::shared_ptr<AStarNode>& b) const {
         if (std::abs(a->f() - b->f()) < 1e-6) {
+            if(a->conflicts == b->conflicts){
+                return !utils::isDiagonal(a->parent->pos, a->pos);
+            }
             return a->conflicts > b->conflicts;
         }
         return a->f() > b->f();

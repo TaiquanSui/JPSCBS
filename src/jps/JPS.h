@@ -8,6 +8,8 @@
 #include <vector>
 #include <memory>
 #include <queue>
+#include <unordered_map>
+#include <functional>
 
 struct Interval {
     std::vector<Vertex> jump_points;  // Store all jump points in the interval in order
@@ -35,9 +37,12 @@ struct JPSPath {
 };
 
 struct JPSPathComparator {
-    bool operator()(const JPSPath& a, const JPSPath& b) const {
-        return utils::calculate_path_cost(a.path) > utils::calculate_path_cost(b.path);
-    }
+    bool operator()(const JPSPath& a, const JPSPath& b) const;
+    static void set_solution_context(const std::unordered_map<int, std::priority_queue<JPSPath, std::vector<JPSPath>, JPSPathComparator>>* ctx);
+
+private:
+    static const std::unordered_map<int, std::priority_queue<JPSPath, std::vector<JPSPath>, JPSPathComparator>>* solution_context;
+    int evaluate_conflicts_with_all_combinations(const JPSPath& test_path) const;
 };
 
 struct JPSState {

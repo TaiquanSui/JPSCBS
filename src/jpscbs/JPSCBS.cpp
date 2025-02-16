@@ -26,7 +26,6 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
     open_list.push(root);
     
     while (!open_list.empty()) {
-
         auto current = open_list.top();
         if (!current) {
             //logger::log_error("遇到空节点，跳过处理");
@@ -35,6 +34,9 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         }
         open_list.pop();
         expanded_nodes++;
+        
+        // 只需要设置一次context
+        JPSPathComparator::set_solution_context(&current->solution);
         
         print_node_info(*current, "Current Node");
         
@@ -233,11 +235,12 @@ void JPSCBS::validate_and_repair_solutions(const std::vector<Agent>& agents, JPS
             auto violated_constraints = utils::find_violated_constrains(agent.id, current_path.path, node.constraints);
             
             if (violated_constraints.empty()) {
-                //logger::log_info("Agent " + std::to_string(agent.id) + " path is valid");
+                logger::log_info("Agent " + std::to_string(agent.id) + " path is valid");
                 break;
             } 
 
             logger::log_info("Agent " + std::to_string(agent.id) + " path violates constraints, attempting repair");
+            logger::log_info("Path: " + logger::vectorToString(current_path.path));
             
             for (const auto& constraint : violated_constraints) {
                 auto constraint_infos = collect_constraint_infos(node, {constraint});
@@ -328,7 +331,7 @@ std::vector<Constraint> JPSCBS::generate_constraints(const JPSCBSNode& node) {
 BypassResult JPSCBS::find_bypass(JPSCBSNode& node, 
                                 const std::vector<ConstraintInfo>& constraint_infos) {
     int original_conflicts = count_conflicts(node);
-    //logger::log_info("Original conflict count: " + std::to_string(original_conflicts));
+    logger::log_info("Original conflict count: " + std::to_string(original_conflicts));
 
     std::vector<std::pair<ConstraintInfo, std::vector<Vertex>>> bypass_paths;
 
@@ -442,8 +445,17 @@ bool JPSCBS::resolve_conflict_locally(JPSCBSNode& node,
     if (info.jp2_jumps_index + 1 < current_path.jump_points.size()) {
         size_t next_jp_index = info.jp2_jumps_index + 1;
         auto next_jp = current_path.jump_points[next_jp_index];  // 使用current_path而不是node中的路径
+        auto next_jp_decide = next_jp;  // 默认使用next_jp
+
+        // 检查jp2是否是某个区间的起始点
+        for (const auto& interval : current_path.possible_intervals) {
+            if (!interval.jump_points.empty() && interval.get_start() == info.jp2) {
+                next_jp_decide = interval.jump_points[1];
+                break;  // 找到后立即退出循环
+            }
+        }
             
-        if (has_better_solution(local_path, info.jp2, next_jp)) {
+        if (has_better_solution(local_path, info.jp1, info.jp2, next_jp_decide, next_jp)) {
             logger::log_info("Could find better path, abandoning jump point: (" + std::to_string(info.jp2.x) + "," + std::to_string(info.jp2.y) + ")");
             auto next_jp_path_index = std::distance(path.begin(), 
                                                     std::find(path.begin(), path.end(), next_jp));
@@ -470,37 +482,37 @@ bool JPSCBS::resolve_conflict_locally(JPSCBSNode& node,
     }else{
         update_path_with_local_solution(node, info, local_path);
     }
-    return true;
+    return false;
 }
 
 
 
 bool JPSCBS::has_better_solution(const std::vector<Vertex>& new_path, 
+                               const Vertex& jp1,
                                const Vertex& jp2, 
+                               const Vertex& next_jp_decide,
                                const Vertex& next_jp) {
-    Vertex direction1 = utils::calculateDirection(next_jp, jp2);
-    Vertex direction2 = utils::calculateDirection(jp2, next_jp);
-    
-    // 如果是水平或垂直线，不需要检查
-    if (direction1.x == 0 || direction1.y == 0) {
-        return false;
-    }
-    
-    // direction1的x和y分量只可能是1或-1
-    int dx = direction1.x;  // 1或-1
-    int dy = direction1.y;  // 1或-1
-    
-    if (dx > 0) {  // 向右的情况
-        for (const auto& point : new_path) {
-            int distance = point.y - jp2.y;
-            if (point.x >= jp2.x + dx * distance) {
+
+    int slope = (next_jp_decide.y - jp2.y) / (next_jp_decide.x - jp2.x);
+    logger::log_info("slope: " + std::to_string(slope));
+
+    if (jp1.y - jp2.y < slope * (jp1.x - jp2.x)) {  // 向右的情况
+        for (auto it = new_path.rbegin(); it != new_path.rend(); ++it) {
+            // 跳过jp2点
+            if (*it == jp2) continue;
+
+            if(it->y - jp2.y >= slope * (it->x - jp2.x)){
+                logger::log_info("above line: " + std::to_string(it->x) + "," + std::to_string(it->y));
                 return true;
             }
         }
     } else {  // 向左的情况
-        for (const auto& point : new_path) {
-            int distance = point.y - jp2.y;
-            if (point.x <= jp2.x + dx * distance) {
+        for (auto it = new_path.rbegin(); it != new_path.rend(); ++it) {
+            // 跳过jp2点
+            if (*it == jp2) continue;
+            
+            if(it->y - jp2.y <= slope * (it->x - jp2.x)){
+                logger::log_info("below line: " + std::to_string(it->x) + "," + std::to_string(it->y));
                 return true;
             }
         }
@@ -660,8 +672,6 @@ int JPSCBS::count_conflicts(const JPSCBSNode& node) {
                 continue;
             }
             total_conflicts += utils::count_conflicts(
-                it1->first,  // agent1_id
-                it2->first,  // agent2_id
                 it1->second.top().path,  // path1
                 it2->second.top().path   // path2
             );
