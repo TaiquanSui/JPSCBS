@@ -109,24 +109,11 @@ std::vector<Agent> load_scen(const std::string& filename, const std::vector<std:
             continue;  // 跳过无效行
         }
 
-        // 先验证起点到终点是否可达
-        Vertex start(start_x, start_y);
-        Vertex goal(goal_x, goal_y);
-        
-        auto path = a_star(start, goal, grid);
-        if (!path.empty()) {
-            // 只有在找到可行路径的情况下才添加agent
-            agents.emplace_back(
-                agent_id++,
-                start,
-                goal
-            );
-        } else {
-            // logger::log_info("跳过不可达的场景: 起点(" +
-            //                std::to_string(start_x) + "," + std::to_string(start_y) +
-            //                ") 终点(" + std::to_string(goal_x) + "," +
-            //                std::to_string(goal_y) + ")");
-        }
+        agents.emplace_back(
+            agent_id++,
+            Vertex(start_x, start_y),
+            Vertex(goal_x, goal_y)
+        );
     }
 
     return agents;

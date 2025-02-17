@@ -133,7 +133,7 @@ std::vector<BenchmarkResult> BenchmarkUtils::run_scen_file_impl(
     std::string map_name = map_path.filename().string();
     std::string scen_name = scen_path.filename().string();
 
-    size_t num_agents = 7;
+    size_t num_agents = 27;
 
     while (num_agents <= all_agents.size()) {
         solver->reset_interrupt();

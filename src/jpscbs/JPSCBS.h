@@ -104,7 +104,7 @@ struct ConstraintInfo {
 };
 
 // 添加新的返回类型结构体
-struct BypassResult {
+struct JPSBypassResult {
     bool success;
     std::vector<std::pair<ConstraintInfo, std::vector<Vertex>>> bypass_paths;
 };
@@ -140,7 +140,7 @@ private:
     void update_solutions(const std::vector<Agent>& agents, JPSCBSNode& node);
     void validate_and_repair_solutions(const std::vector<Agent>& agents, JPSCBSNode& node);
     std::vector<Constraint> generate_constraints(const JPSCBSNode& node);
-    BypassResult find_bypass(JPSCBSNode& node,
+    JPSBypassResult find_bypass(JPSCBSNode& node,
                            const std::vector<ConstraintInfo>& constraint_infos);
     
     bool resolve_conflict_locally(JPSCBSNode& node,
@@ -152,10 +152,8 @@ private:
     void update_path_with_local_solution(JPSCBSNode& node, const ConstraintInfo& info, const std::vector<Vertex>& local_path);
 
     bool has_better_solution(const std::vector<Vertex>& new_path, 
-                                  const Vertex& jp1,
-                                  const Vertex& jp2, 
-                                  const Vertex& next_jp_decide,
-                                  const Vertex& next_jp);
+                                  const ConstraintInfo& info,
+                                  const JPSPath& current_path);
     
     int count_conflicts(const JPSCBSNode& node);
     void print_node_info(const JPSCBSNode& node, const std::string& prefix);
@@ -163,6 +161,11 @@ private:
                                                        const std::vector<Constraint>& constraints);
     std::shared_ptr<JPSCBSNode> initialize(const std::vector<Agent>& agents);
     ConflictAvoidanceTable calculate_cat(const std::unordered_set<int>& excluded_agents, const JPSCBSNode& node) const;
+
+    bool is_path_crossing_line(const std::vector<Vertex>& path, 
+                             const Vertex& jp1,
+                             const Vertex& jp2, 
+                             const Vertex& next_jp_decide) const;
 };
 
 #endif // JPSCBS_H

@@ -30,13 +30,43 @@ struct AStarNode {
 
 struct AStarNodeComparator {
     bool operator()(const std::shared_ptr<AStarNode>& a, const std::shared_ptr<AStarNode>& b) const {
-        if (std::abs(a->f() - b->f()) < 1e-6) {
-            if(a->conflicts == b->conflicts){
-                return !utils::isDiagonal(a->parent->pos, a->pos);
-            }
+        // 1. f(n) 低的优先
+        if (std::abs(a->f() - b->f()) > 1e-6) {
+            return a->f() > b->f();
+        }
+
+        // 2. h=0 的节点优先（说明到达目标）
+        if (std::abs(a->h) < 1e-6) {  // a 到达目标
+            return false;  // a 优先
+        }
+
+        if (std::abs(b->h) < 1e-6) {  // b 到达目标
+            return true;   // b 优先
+        }
+        
+        // 3. 冲突次数低的优先
+        if (a->conflicts != b->conflicts) {
             return a->conflicts > b->conflicts;
         }
-        return a->f() > b->f();
+        
+        // 4. g(n) 高的优先
+        if (std::abs(a->g - b->g) > 1e-6) {
+            return a->g < b->g;  // 注意这里是 < 因为我们要高的优先
+        }
+
+        // // 5. 对角线移动优先
+        // if (a->parent && b->parent && a->parent->pos == b->parent->pos) {
+        //     if (utils::isDiagonal(a->pos - a->parent->pos)) {
+        //         return false;
+        //     }
+
+        //     if (utils::isDiagonal(b->pos - b->parent->pos)) {
+        //         return true;
+        //     }
+        // }
+        
+        // 6. 时间戳早的优先
+        return a->time > b->time;
     }
 };
 

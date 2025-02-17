@@ -479,64 +479,63 @@ void JPSPathComparator::set_solution_context(const std::unordered_map<int, std::
 }
 
 int JPSPathComparator::evaluate_conflicts_with_all_combinations(const JPSPath& test_path) const {
-    if (!solution_context) return 0;
+    if (!solution_context || test_path.path.empty()) return 0;
     
-    // 收集其他agent的相同cost的路径
-    std::unordered_map<int, std::vector<const JPSPath*>> same_cost_paths;
+    // 改用存储路径而不是指针
+    std::unordered_map<int, std::vector<JPSPath>> same_cost_paths;
+    
     for (const auto& [agent_id, paths] : *solution_context) {
         if (paths.empty()) continue;
         
-        // 获取该agent所有cost相同的路径
         auto temp_queue = paths;
         double first_cost = utils::calculate_path_cost(temp_queue.top().path);
         
-        std::vector<const JPSPath*>& agent_paths = same_cost_paths[agent_id];
+        std::vector<JPSPath>& agent_paths = same_cost_paths[agent_id];
         while (!temp_queue.empty()) {
-            const auto& current_path = temp_queue.top();
-            if (std::abs(utils::calculate_path_cost(current_path.path) - first_cost) > 1e-6) {
-                break;
-            }
+            JPSPath current_path = temp_queue.top();
+            temp_queue.pop();
             
-            // 如果发现test_path，删除此agent的paths并跳出
-            if (&current_path == &test_path) {
+            if (current_path.path.empty()) continue;
+            
+            if (std::abs(utils::calculate_path_cost(current_path.path) - first_cost) > 1e-6) break;
+            
+            // 使用路径内容比较而不是指针比较
+            if (current_path.path == test_path.path) {
                 same_cost_paths.erase(agent_id);
                 break;
             }
             
-            agent_paths.push_back(&current_path);
-            temp_queue.pop();
+            agent_paths.push_back(std::move(current_path));
         }
     }
     
-    // 计算所有可能组合中的最小冲突数
+    // 计算冲突
     int min_conflicts = INT_MAX;
-    std::unordered_map<int, const JPSPath*> current_combination;
-    
-    std::function<void(std::unordered_map<int, std::vector<const JPSPath*>>::iterator)> try_combinations;
-    try_combinations = [&](auto it) {
-        if (it == same_cost_paths.end()) {
-            // 计算当前组合的冲突数
-            int conflicts = 0;
-            for (const auto& [id1, path1] : current_combination) {
-                conflicts += utils::count_conflicts(test_path.path, path1->path);
-                for (const auto& [id2, path2] : current_combination) {
-                    if (id1 < id2) {
-                        conflicts += utils::count_conflicts(path1->path, path2->path);
-                    }
-                }
-            }
-            min_conflicts = std::min(min_conflicts, conflicts);
-            return;
-        }
-        
-        // 尝试当前agent的每条路径
-        for (const auto* path : it->second) {
-            current_combination[it->first] = path;
-            try_combinations(std::next(it));
-        }
-    };
+    std::unordered_map<int, JPSPath> current_combination;
     
     if (!same_cost_paths.empty()) {
+        std::function<void(std::unordered_map<int, std::vector<JPSPath>>::iterator)> try_combinations;
+        try_combinations = [&](auto it) {
+            if (it == same_cost_paths.end()) {
+                int conflicts = 0;
+                for (const auto& [id1, path1] : current_combination) {
+                    conflicts += utils::count_conflicts(test_path.path, path1.path);
+                    for (const auto& [id2, path2] : current_combination) {
+                        if (id1 < id2) {
+                            conflicts += utils::count_conflicts(path1.path, path2.path);
+                        }
+                    }
+                }
+                min_conflicts = std::min(min_conflicts, conflicts);
+                return;
+            }
+            
+            for (const auto& path : it->second) {
+                current_combination.insert_or_assign(it->first, path);  // 或者用emplace
+                try_combinations(std::next(it));
+            }
+        };
+        
         try_combinations(same_cost_paths.begin());
     }
     

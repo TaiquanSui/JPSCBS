@@ -4,7 +4,6 @@
 int main() {
     try {
         auto cbs = std::make_unique<CBS>(true);  // Enable optimization
-        cbs->set_time_limit(30.0);  // Set 30 seconds timeout
         
         logger::log_info("Starting benchmark for all scenarios");
         BenchmarkUtils::benchmark_all_scenarios(cbs.get());

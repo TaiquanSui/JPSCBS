@@ -7,13 +7,12 @@ namespace fs = std::filesystem;
 int main() {
     try {
         // 指定要测试的地图和场景
-        std::string map_name = "Berlin_1_256";
-        std::string scenario_type = "random";  // 或 "random"
-        int scenario_number = 5;  // 场景编号 1-25
+        std::string map_name = "warehouse-10-20-10-2-1";
+        std::string scenario_type = "even";  // even 或 "random"
+        int scenario_number = 6;  // 场景编号 1-25
 
         // 初始化求解器
         auto jpscbs = std::make_unique<JPSCBS>();
-        jpscbs->set_time_limit(30.0);
         
         // 构建文件路径
         std::string root_dir = BenchmarkUtils::get_project_root();
@@ -42,7 +41,7 @@ int main() {
         logger::log_info("测试场景: " + scen_file);
         
         // 运行测试
-        auto results = BenchmarkUtils::run_scen_file_impl(map_path.string(), scen_file, jpscbs.get());
+        auto results = BenchmarkUtils::run_scen_file_impl(map_path.string(), scen_file, jpscbs.get(), 30);
         
         // 输出结果
         for (const auto& result : results) {

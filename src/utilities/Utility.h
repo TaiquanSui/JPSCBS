@@ -34,15 +34,15 @@ namespace utils {
     }
 
     inline bool isPassable (const std::vector<std::vector<int>>& grid, const Vertex& pos) {
-        return pos.x >= 0 && pos.x < grid.size() && 
-               pos.y >= 0 && pos.y < grid[0].size() && 
-               grid[pos.x][pos.y] == 0;
+        return pos.y >= 0 && pos.y < grid.size() && 
+               pos.x >= 0 && pos.x < grid[0].size() && 
+               grid[pos.y][pos.x] == 0;
     }
 
     inline bool isPassable(const std::vector<std::vector<int>>& grid, int x, int y) {
-        return x >= 0 && x < grid.size() && 
-               y >= 0 && y < grid[0].size() && 
-               grid[x][y] == 0;
+        return y >= 0 && y < grid.size() && 
+               x >= 0 && x < grid[0].size() && 
+               grid[y][x] == 0;
     }
 
     inline bool isWalkable(const std::vector<std::vector<int>>& grid, const Vertex& from, const Vertex& to) {

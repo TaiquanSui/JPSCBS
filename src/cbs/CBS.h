@@ -37,6 +37,11 @@ struct CBSNode {
     CBSNode() : cost(0.0) {}
 };
 
+struct CBSBypassResult {
+    bool success;
+    std::vector<std::pair<Constraint, std::vector<Vertex>>> bypass_paths;
+};
+
 class CBS {
 public:
     explicit CBS(bool use_bypass = true) : use_bypass(use_bypass) {}
@@ -52,7 +57,7 @@ public:
 
     void interrupt() { interrupted = true; }
     void reset_interrupt() { interrupted = false; }
-    bool should_terminate() const { return interrupted || is_timeout(); }
+    bool should_terminate() const { return interrupted; }
 
 private:
     bool use_bypass;
@@ -62,7 +67,7 @@ private:
     std::atomic<bool> interrupted{false};  // 内部中断状态
             
     std::vector<Constraint> generate_constraints(const CBSNode& node);
-    bool find_bypass(CBSNode& node, const std::vector<Constraint>& constraints, const std::vector<Agent>& agents, 
+    CBSBypassResult find_bypass(CBSNode& node, const std::vector<Constraint>& constraints, const std::vector<Agent>& agents, 
                      const std::vector<std::vector<int>>& grid);
     
     bool is_timeout() const;
