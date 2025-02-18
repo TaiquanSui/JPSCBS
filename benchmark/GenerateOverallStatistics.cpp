@@ -21,33 +21,23 @@ struct ComparisonResult {
     int jpscbs_nodes;
 };
 
-void process_csv_file(const std::string& input_path) {
-    // 读取文件内容，但不包括 Overall Comparison 部分
+std::vector<ComparisonResult> read_comparison_file(const std::string& input_path) {
     std::ifstream infile(input_path);
-    std::vector<std::string> content;
+    std::vector<ComparisonResult> results;
     std::string line;
     
     // 跳过前两行标题
     std::getline(infile, line);
-    content.push_back(line);
     std::getline(infile, line);
-    content.push_back(line);
     
     // 读取数据行直到 Overall Comparison
     while (std::getline(infile, line)) {
         if (line.find("Overall Comparison") != std::string::npos) {
             break;
         }
-        if (!line.empty()) {
-            content.push_back(line);
-        }
-    }
-    infile.close();
-    
-    // 处理数据并生成统计结果
-    std::vector<ComparisonResult> results;
-    for (size_t i = 2; i < content.size(); ++i) {  // 从第3行开始处理数据
-        std::stringstream ss(content[i]);
+        if (line.empty()) continue;
+        
+        std::stringstream ss(line);
         ComparisonResult result;
         std::string token;
         
@@ -82,9 +72,39 @@ void process_csv_file(const std::string& input_path) {
             
             results.push_back(result);
         } catch (const std::exception& e) {
-            std::cerr << "error when processing line: " << content[i] << std::endl;
-            std::cerr << "error info: " << e.what() << std::endl;
-            continue;  // 跳过有问题的行
+            std::cerr << "Error processing line: " << line << std::endl;
+            std::cerr << "Error info: " << e.what() << std::endl;
+            continue;
+        }
+    }
+    
+    return results;
+}
+
+int main() {
+    std::filesystem::path current_path = std::filesystem::current_path();
+    while (!std::filesystem::exists(current_path / "data")) {
+        if (current_path.parent_path() == current_path) {
+            throw std::runtime_error("Project root directory not found");
+        }
+        current_path = current_path.parent_path();
+    }
+
+    std::filesystem::path results_dir = current_path / "benchmark_results";
+    std::vector<ComparisonResult> all_results;
+    
+    // 遍历所有文件并收集结果
+    for (const auto& entry : std::filesystem::directory_iterator(results_dir)) {
+        if (entry.is_regular_file()) {
+            std::string filename = entry.path().filename().string();
+            
+            if (filename.starts_with("benchmark_comparison_") && 
+                filename.ends_with(".csv")) {
+                
+                std::cout << "Reading file: " << filename << std::endl;
+                auto results = read_comparison_file(entry.path().string());
+                all_results.insert(all_results.end(), results.begin(), results.end());
+            }
         }
     }
     
@@ -96,8 +116,7 @@ void process_csv_file(const std::string& input_path) {
     // 使用set来记录所有唯一的场景名称
     std::set<std::string> unique_scenarios;
     
-    for (const auto& result : results) {
-        // 记录唯一场景
+    for (const auto& result : all_results) {
         unique_scenarios.insert(result.scen_name);
         
         if (result.cbs_success) {
@@ -115,15 +134,9 @@ void process_csv_file(const std::string& input_path) {
     // 总场景数
     int total_scenarios = unique_scenarios.size();
     
-    // 重写整个文件
-    std::ofstream outfile(input_path);
-    // 写入原有内容
-    for (const auto& line : content) {
-        outfile << line << "\n";
-    }
-    
-    // 写入新的统计结果
-    outfile << "\nOverall Comparison:\n";
+    // 写入总体统计结果
+    std::ofstream outfile(results_dir / "overall_comparison_statistics.csv");
+    outfile << "Overall Comparison Statistics Across All Maps:\n";
     outfile << "Agents,CBS Success Rate,CBS Avg Runtime,CBS Avg Nodes,"
             << "JPSCBS Success Rate,JPSCBS Avg Runtime,JPSCBS Avg Nodes\n";
     
@@ -151,34 +164,7 @@ void process_csv_file(const std::string& input_path) {
     }
     
     outfile.close();
-    std::cout << "Has been processed: " << input_path << std::endl;
-}
-
-int main() {
-    std::filesystem::path current_path = std::filesystem::current_path();
-    while (!std::filesystem::exists(current_path / "data")) {
-        if (current_path.parent_path() == current_path) {
-            throw std::runtime_error("Project root directory not found");
-        }
-        current_path = current_path.parent_path();
-    }
-
-    std::filesystem::path results_dir = current_path / "benchmark_results";
-    
-    // 遍历目录中的所有文件
-    for (const auto& entry : std::filesystem::directory_iterator(results_dir)) {
-        if (entry.is_regular_file()) {  // 确保是普通文件
-            std::string filename = entry.path().filename().string();
-            
-            // 检查文件是否以"benchmark_comparison_"开头且以".csv"结尾
-            if (filename.starts_with("benchmark_comparison_") && 
-                filename.ends_with(".csv")) {
-                
-                std::cout << "Processing file: " << filename << std::endl;
-                process_csv_file(entry.path().string());
-            }
-        }
-    }
+    std::cout << "Overall statistics have been written to: overall_comparison_statistics.csv" << std::endl;
 
     return 0;
 } 

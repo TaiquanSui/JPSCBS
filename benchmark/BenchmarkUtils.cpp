@@ -367,67 +367,46 @@ void BenchmarkUtils::print_result(const std::string& map_file,
 }
 
 BenchmarkStats BenchmarkUtils::calculate_stats(const std::vector<BenchmarkResult>& results) {
-    BenchmarkStats stats_obj;
+    BenchmarkStats stats;
     
-    // 统计不同场景
-    std::set<std::pair<std::string, std::string>> unique_scenarios;  // {map_name, scen_name}
+    // 计算唯一场景数
+    std::set<std::string> unique_scenarios;
     for (const auto& result : results) {
-        unique_scenarios.insert({result.map_name, result.scen_name});
+        unique_scenarios.insert(result.scen_name);
     }
     int total_scenarios = unique_scenarios.size();
-
-    // 按照agent数量统计成功率
-    std::map<size_t, int> success_counts;  // agent数量 -> 成功次数
+    
+    // 按智能体数量分组统计
+    std::map<size_t, int> success_count;
+    std::map<size_t, double> runtime_sum;
+    std::map<size_t, double> nodes_sum;
+    std::set<size_t> all_agents;
+    
     for (const auto& result : results) {
+        all_agents.insert(result.num_agents);
         if (result.success) {
-            success_counts[result.num_agents]++;
+            success_count[result.num_agents]++;
+            runtime_sum[result.num_agents] += result.runtime;
+            nodes_sum[result.num_agents] += result.nodes_expanded;
         }
     }
     
-    // 计算每个agent数量的成功率
-    for (const auto& [agents, successes] : success_counts) {
-        stats_obj.success_rates[agents] = static_cast<double>(successes) / total_scenarios;
-    }
-    
-    // 统计不同场景和成功案例的运行时间、节点数
-    std::map<size_t, std::pair<double, int>> runtime_stats;   // agent数量 -> {总时间, 成功次数}
-    std::map<size_t, std::pair<double, int>> nodes_stats;     // agent数量 -> {总节点数, 成功次数}
-    
-    for (const auto& result : results) {
-        if (result.success) {
-            runtime_stats[result.num_agents].first += result.runtime;
-            runtime_stats[result.num_agents].second++;
-            nodes_stats[result.num_agents].first += result.nodes_expanded;
-            nodes_stats[result.num_agents].second++;
+    // 计算每个智能体数量的统计数据
+    for (size_t agents : all_agents) {
+        // 成功率使用总场景数作为分母
+        stats.success_rates[agents] = static_cast<double>(success_count[agents]) / total_scenarios;
+        
+        // 平均运行时间和节点数只考虑成功的案例
+        if (success_count[agents] > 0) {
+            stats.avg_runtimes[agents] = runtime_sum[agents] / success_count[agents];
+            stats.avg_nodes[agents] = nodes_sum[agents] / success_count[agents];
+        } else {
+            stats.avg_runtimes[agents] = 0.0;
+            stats.avg_nodes[agents] = 0.0;
         }
     }
     
-    // 计算每个agent数量的平均值
-    for (const auto& [agents, stats] : runtime_stats) {
-        stats_obj.avg_runtimes[agents] = stats.second > 0 ? 
-            stats.first / stats.second : 0.0;
-    }
-    
-    for (const auto& [agents, stats] : nodes_stats) {
-        stats_obj.avg_nodes[agents] = stats.second > 0 ? 
-            stats.first / stats.second : 0.0;
-    }
-    
-    // 计算其他统计信息
-    stats_obj.total_instances = results.size();
-    stats_obj.successful_instances = std::count_if(results.begin(), results.end(),
-        [](const BenchmarkResult& r) { return r.success; });
-    
-    double total_runtime = 0.0;
-    double total_nodes = 0.0;
-    for (const auto& result : results) {
-        if (result.success) {
-            total_runtime += result.runtime;
-            total_nodes += result.nodes_expanded;
-        }
-    }
-    
-    return stats_obj;
+    return stats;
 }
 
 // 创建CSV文件并返回文件流
@@ -760,4 +739,5 @@ void BenchmarkUtils::restore_thread_priority() {
         pthread_setschedparam(pthread_self(), SCHED_OTHER, &param);
     #endif
 }
+
 
