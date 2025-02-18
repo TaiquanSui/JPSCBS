@@ -27,9 +27,6 @@ void process_csv_file(const std::string& input_path) {
     std::vector<std::string> content;
     std::string line;
     
-    // 跳过前两行标题
-    std::getline(infile, line);
-    content.push_back(line);
     std::getline(infile, line);
     content.push_back(line);
     
@@ -46,7 +43,7 @@ void process_csv_file(const std::string& input_path) {
     
     // 处理数据并生成统计结果
     std::vector<ComparisonResult> results;
-    for (size_t i = 2; i < content.size(); ++i) {  // 从第3行开始处理数据
+    for (size_t i = 1; i < content.size(); ++i) {  // 从第3行开始处理数据
         std::stringstream ss(content[i]);
         ComparisonResult result;
         std::string token;

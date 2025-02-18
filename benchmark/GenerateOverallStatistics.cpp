@@ -28,7 +28,6 @@ std::vector<ComparisonResult> read_comparison_file(const std::string& input_path
     
     // 跳过前两行标题
     std::getline(infile, line);
-    std::getline(infile, line);
     
     // 读取数据行直到 Overall Comparison
     while (std::getline(infile, line)) {

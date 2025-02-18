@@ -78,35 +78,95 @@ void BenchmarkUtils::benchmark_all_scenarios_comparison(
         std::string root_dir = get_project_root();
         
         for (const auto& map_path : map_paths) {
-            std::string csv_filename = (fs::path(root_dir) / "benchmark_results" / ("benchmark_comparison_" + get_map_name(map_path) + ".csv")).string();
-            logger::log_info("csv_filename: " + csv_filename);
-            if (fs::exists(csv_filename)) {
-                logger::log_info("跳过已完成的地图: " + get_map_name(map_path));
-                continue;
+            std::string map_name = get_map_name(map_path);
+            logger::log_info("\nTesting map: " + map_name);
+            
+            fs::path data_dir = fs::path(root_dir) / "data";
+            fs::path random_scen_dir = data_dir / "mapf-scen-random";
+            fs::path even_scen_dir = data_dir / "mapf-scen-even";
+            
+            struct ScenType {
+                const char* name;
+                fs::path dir;
+            };
+            
+            std::vector<ScenType> scenario_types = {
+                {"even", even_scen_dir},
+                {"random", random_scen_dir}
+            };
+
+            for (const auto& scenario : scenario_types) {
+                logger::log_info("Testing " + std::string(scenario.name) + " scenarios");
+                for (int i = 1; i <= 25; ++i) {
+                    std::string scen_file = make_scen_path(scenario.dir.string(), 
+                                                         map_name, 
+                                                         scenario.name, i);
+                    if (fs::exists(scen_file)) {
+                        // 检查是否已经测试过这个场景
+                        bool scenario_exists = false;
+                        std::string csv_path = (fs::path(get_project_root()) / "benchmark_results" / 
+                                             ("benchmark_comparison_" + map_name + ".csv")).string();
+                        
+                        if (fs::exists(csv_path)) {
+                            std::ifstream check_file(csv_path);
+                            std::string line;
+                            std::string scen_name = fs::path(scen_file).filename().string();
+                            
+                            // 跳过表头
+                            std::getline(check_file, line);
+                            
+                            // 检查每一行
+                            while (std::getline(check_file, line)) {
+                                if (line.find("Overall Comparison:") != std::string::npos) {
+                                    break;  // 遇到总结部分就停止
+                                }
+                                if (line.find(scen_name) != std::string::npos) {
+                                    scenario_exists = true;
+                                    break;
+                                }
+                            }
+                            check_file.close();
+                        }
+                        
+                        if (scenario_exists) {
+                            logger::log_info("Test already done: " + scen_file);
+                            continue;
+                        }
+                        
+                        logger::log_info("Testing scenario: " + scen_file);
+                        
+                        // 运行CBS
+                        logger::log_info("Running CBS algorithm");
+                        auto cbs_scenario_results = run_scen_file_impl(map_path, scen_file, solver1);
+                        
+                        // 冷却时间
+                        std::this_thread::sleep_for(std::chrono::seconds(2));
+                        
+                        // 运行JPSCBS
+                        logger::log_info("Running JPSCBS algorithm");
+                        auto jpscbs_scenario_results = run_scen_file_impl(map_path, scen_file, solver2);
+                        
+                        // 立即写入这个场景的比较结果
+                        write_comparison_results_to_csv(
+                            "benchmark_comparison_" + map_name + ".csv",
+                            cbs_scenario_results,
+                            jpscbs_scenario_results
+                        );
+                        
+                        // 保存到总结果中
+                        cbs_results.insert(cbs_results.end(), 
+                                         cbs_scenario_results.begin(), 
+                                         cbs_scenario_results.end());
+                        jpscbs_results.insert(jpscbs_results.end(), 
+                                            jpscbs_scenario_results.begin(), 
+                                            jpscbs_scenario_results.end());
+                        
+                    } else {
+                        logger::log_warning("Scenario file not found: " + scen_file);
+                    }
+                }
             }
-
-            // 运行CBS
-            logger::log_info("\nRunning CBS algorithm on map: " + get_map_name(map_path));
-            auto map_cbs_results = run_all_scenarios_impl(map_path, solver1);
-            cbs_results.insert(cbs_results.end(), map_cbs_results.begin(), map_cbs_results.end());
-            
-            // 冷却时间
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-            
-            // 运行JPSCBS
-            logger::log_info("\nRunning JPSCBS algorithm on map: " + get_map_name(map_path));
-            auto map_jpscbs_results = run_all_scenarios_impl(map_path, solver2);
-            jpscbs_results.insert(jpscbs_results.end(), map_jpscbs_results.begin(), map_jpscbs_results.end());
-            
-            // 即时写入当前地图的结果
-            write_comparison_results_to_csv("benchmark_comparison_"+get_map_name(map_path)+".csv", 
-                                          map_cbs_results, 
-                                          map_jpscbs_results);
         }
-
-        write_comparison_summary_to_csv("benchmark_comparison_summary.csv", 
-                                        cbs_results, 
-                                        jpscbs_results);
         
         restore_thread_priority();
         
@@ -256,13 +316,15 @@ std::vector<BenchmarkResult> BenchmarkUtils::run_all_scenarios_impl(
 
         for (const auto& scenario : scenario_types) {
             logger::log_info("Testing " + std::string(scenario.name) + " scenarios");
-            for (int i = 1; i <= 5; ++i) {
+            for (int i = 1; i <= 25; ++i) {
                 std::string scen_file = make_scen_path(scenario.dir.string(), 
                                                      map_name, 
                                                      scenario.name, i);
                 if (fs::exists(scen_file)) {
                     logger::log_info("Testing scenario: " + scen_file);
                     auto scenario_results = run_scen_file_impl(map_path, scen_file, solver);
+                    
+                    // 保存到总结果中
                     all_results.insert(all_results.end(), 
                                     scenario_results.begin(), 
                                     scenario_results.end());
@@ -427,7 +489,7 @@ std::ofstream BenchmarkUtils::create_csv_file(const std::string& filename) {
     fs::path file_path = results_dir / filename;
     logger::log_info("Writing results to: " + file_path.string());
     
-    std::ofstream file(file_path);
+    std::ofstream file(file_path, std::ios::app);
     if (!file.is_open()) {
         throw std::runtime_error("Unable to create CSV file: " + file_path.string());
     }
@@ -440,19 +502,44 @@ void BenchmarkUtils::write_results_to_csv(
     const std::vector<BenchmarkResult>& results) {
     
     try {
-        auto file = create_csv_file(filename);
+        // 获取项目根目录
+        std::string root_dir = get_project_root();
+        fs::path results_dir = fs::path(root_dir) / "benchmark_results";
         
-        // 写入详细结果
-        file << "Detailed Results:\n";
-        file << "Scenario,Agents,Success,Runtime,Total Cost,Nodes Expanded\n";
+        // 确保目录存在
+        if (!fs::exists(results_dir)) {
+            logger::log_info("Creating directory: " + results_dir.string());
+            if (!fs::create_directories(results_dir)) {
+                throw std::runtime_error("Failed to create directory: " + results_dir.string());
+            }
+        }
         
-        for (const auto& result : results) {
+        fs::path file_path = results_dir / filename;
+        
+        // 如果是新文件，先写入表头
+        if (!fs::exists(file_path)) {
+            std::ofstream header_file(file_path);
+            header_file << "Scenario,Agents,Success,Runtime,Total Cost,Nodes Expanded\n";
+            header_file.close();
+        }
+        
+        // 追加模式写入结果
+        std::ofstream file(file_path, std::ios::app);
+        if (!file.is_open()) {
+            throw std::runtime_error("Unable to open CSV file: " + file_path.string());
+        }
+        
+        for (size_t i = 0; i < results.size(); ++i) {
+            const auto& result = results[i];
             file << result.scen_name << ","
                  << result.num_agents << ","
                  << (result.success ? "Yes" : "No") << ","
                  << std::fixed << std::setprecision(2) << result.runtime << ","
                  << result.total_cost << ","
-                 << result.nodes_expanded << "\n";
+                 << result.nodes_expanded;
+            if (i < results.size() - 1) {
+                file << "\n";
+            }
         }
         
         file.close();
@@ -497,14 +584,60 @@ void BenchmarkUtils::write_comparison_results_to_csv(
     const std::vector<BenchmarkResult>& jpscbs_results) {
     
     try {
-        auto file = create_csv_file(filename);
+        // 获取项目根目录
+        std::string root_dir = get_project_root();
+        fs::path results_dir = fs::path(root_dir) / "benchmark_results";
         
-        // 写入详细比较结果
-        file << "Detailed Comparison Results:\n";
-        file << "Scenario,Agents,CBS Success,CBS Runtime,CBS Total Cost,CBS Nodes,"
-             << "JPSCBS Success,JPSCBS Runtime,JPSCBS Total Cost,JPSCBS Nodes\n";
-
-        // 按场景名称组织结果
+        // 确保目录存在
+        if (!fs::exists(results_dir)) {
+            logger::log_info("Creating directory: " + results_dir.string());
+            if (!fs::create_directories(results_dir)) {
+                throw std::runtime_error("Failed to create directory: " + results_dir.string());
+            }
+        }
+        
+        fs::path file_path = results_dir / filename;
+        
+        // 如果文件存在，先读取所有内容
+        std::vector<std::string> file_contents;
+        size_t summary_start_line = 0;
+        bool has_summary = false;
+        
+        if (fs::exists(file_path)) {
+            std::ifstream infile(file_path);
+            std::string line;
+            size_t line_number = 0;
+            
+            while (std::getline(infile, line)) {
+                if (line.find("Overall Comparison:") != std::string::npos) {
+                    summary_start_line = line_number;
+                    has_summary = true;
+                    break;
+                }
+                file_contents.push_back(line);
+                line_number++;
+            }
+            infile.close();
+        }
+        
+        // 打开文件准备写入（使用覆盖模式而不是追加模式）
+        std::ofstream file(file_path);
+        if (!file.is_open()) {
+            throw std::runtime_error("Unable to open CSV file: " + file_path.string());
+        }
+        
+        // 如果是新文件，写入表头
+        if (file_contents.empty()) {
+            file << "Scenario,Agents,CBS Success,CBS Runtime,CBS Total Cost,CBS Nodes,"
+                 << "JPSCBS Success,JPSCBS Runtime,JPSCBS Total Cost,JPSCBS Nodes\n";
+        } else {
+            // 写入原有的详细结果部分（不包括总结）
+            for (const auto& line : file_contents) {
+                file << line << "\n";
+            }
+        }
+        
+        // 写入新的结果
         std::map<std::string, std::pair<
             std::unordered_map<size_t, BenchmarkResult>,
             std::unordered_map<size_t, BenchmarkResult>>> results_by_scen;
@@ -570,24 +703,38 @@ void BenchmarkUtils::write_comparison_summary_to_csv(
     const std::vector<BenchmarkResult>& jpscbs_results) {
     
     try {
+        // 获取项目根目录
+        std::string root_dir = get_project_root();
+        fs::path results_dir = fs::path(root_dir) / "benchmark_results";
+        fs::path file_path = results_dir / filename;
+        
+        // 读取现有结果（如果存在）
+        std::vector<BenchmarkResult> existing_cbs_results = cbs_results;
+        std::vector<BenchmarkResult> existing_jpscbs_results = jpscbs_results;
+        
+        if (fs::exists(file_path)) {
+            // TODO: 如果需要，这里可以添加读取现有文件数据的逻辑
+            logger::log_info("更新现有汇总文件: " + filename);
+        }
+        
         auto file = create_csv_file(filename);
-        auto cbs_stats = calculate_stats(cbs_results);
-        auto jpscbs_stats = calculate_stats(jpscbs_results);
+        auto stats = calculate_stats(existing_cbs_results);
+        auto jpscbs_stats = calculate_stats(existing_jpscbs_results);
         
         file << "Overall Comparison Statistics:\n";
         file << "Agents,CBS Success Rate,CBS Avg Runtime,CBS Avg Nodes,"
              << "JPSCBS Success Rate,JPSCBS Avg Runtime,JPSCBS Avg Nodes\n";
         
         std::set<size_t> all_agents;
-        for (const auto& [agents, _] : cbs_stats.success_rates) all_agents.insert(agents);
+        for (const auto& [agents, _] : stats.success_rates) all_agents.insert(agents);
         for (const auto& [agents, _] : jpscbs_stats.success_rates) all_agents.insert(agents);
         
         for (size_t agents : all_agents) {
             file << agents << ","
                  << std::fixed << std::setprecision(2)
-                 << (cbs_stats.success_rates.count(agents) ? cbs_stats.success_rates[agents] * 100 : 0.0) << "%,"
-                 << (cbs_stats.avg_runtimes.count(agents) ? cbs_stats.avg_runtimes[agents] : 0.0) << ","
-                 << (cbs_stats.avg_nodes.count(agents) ? cbs_stats.avg_nodes[agents] : 0.0) << ","
+                 << (stats.success_rates.count(agents) ? stats.success_rates[agents] * 100 : 0.0) << "%,"
+                 << (stats.avg_runtimes.count(agents) ? stats.avg_runtimes[agents] : 0.0) << ","
+                 << (stats.avg_nodes.count(agents) ? stats.avg_nodes[agents] : 0.0) << ","
                  << (jpscbs_stats.success_rates.count(agents) ? jpscbs_stats.success_rates[agents] * 100 : 0.0) << "%,"
                  << (jpscbs_stats.avg_runtimes.count(agents) ? jpscbs_stats.avg_runtimes[agents] : 0.0) << ","
                  << (jpscbs_stats.avg_nodes.count(agents) ? jpscbs_stats.avg_nodes[agents] : 0.0) << "\n";
