@@ -133,7 +133,7 @@ std::vector<BenchmarkResult> BenchmarkUtils::run_scen_file_impl(
     std::string map_name = map_path.filename().string();
     std::string scen_name = scen_path.filename().string();
 
-    size_t num_agents = 27;
+    size_t num_agents = 1;
 
     while (num_agents <= all_agents.size()) {
         solver->reset_interrupt();
@@ -256,7 +256,7 @@ std::vector<BenchmarkResult> BenchmarkUtils::run_all_scenarios_impl(
 
         for (const auto& scenario : scenario_types) {
             logger::log_info("Testing " + std::string(scenario.name) + " scenarios");
-            for (int i = 1; i <= 3; ++i) {
+            for (int i = 1; i <= 5; ++i) {
                 std::string scen_file = make_scen_path(scenario.dir.string(), 
                                                      map_name, 
                                                      scenario.name, i);
