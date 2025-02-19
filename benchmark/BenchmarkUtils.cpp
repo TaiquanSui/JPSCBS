@@ -77,8 +77,22 @@ void BenchmarkUtils::benchmark_all_scenarios_comparison(
         auto map_paths = get_all_map_paths();
         std::string root_dir = get_project_root();
         
+        // 定义要跳过的地图
+        std::unordered_set<std::string> skip_maps = {
+            "empty-16-16",
+            "empty-32-32",
+            "empty-48-48"
+        };
+        
         for (const auto& map_path : map_paths) {
             std::string map_name = get_map_name(map_path);
+            
+            // 检查是否需要跳过当前地图
+            if (skip_maps.find(map_name) != skip_maps.end()) {
+                logger::log_info("跳过地图: " + map_name);
+                continue;
+            }
+            
             logger::log_info("\nTesting map: " + map_name);
             
             fs::path data_dir = fs::path(root_dir) / "data";
