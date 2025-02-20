@@ -79,6 +79,7 @@ void BenchmarkUtils::benchmark_all_scenarios_comparison(
         
         // 定义要跳过的地图
         std::unordered_set<std::string> skip_maps = {
+            "empty-8-8",
             "empty-16-16",
             "empty-32-32",
             "empty-48-48"
