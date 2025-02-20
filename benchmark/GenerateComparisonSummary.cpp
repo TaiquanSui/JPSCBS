@@ -86,7 +86,7 @@ void process_csv_file(const std::string& input_path) {
     }
     
     // 计算统计数据
-    std::map<size_t, int> cbs_success_count, jpscbs_success_count;
+    std::map<size_t, int> cbs_success_count, jpscbs_success_count, both_success_count;
     std::map<size_t, double> cbs_runtime_sum, jpscbs_runtime_sum;
     std::map<size_t, double> cbs_nodes_sum, jpscbs_nodes_sum;
     
@@ -99,11 +99,16 @@ void process_csv_file(const std::string& input_path) {
         
         if (result.cbs_success) {
             cbs_success_count[result.num_agents]++;
-            cbs_runtime_sum[result.num_agents] += result.cbs_runtime;
-            cbs_nodes_sum[result.num_agents] += result.cbs_nodes;
         }
         if (result.jpscbs_success) {
             jpscbs_success_count[result.num_agents]++;
+        }
+        
+        // 只在两种算法都成功的情况下累加运行时间和节点数
+        if (result.cbs_success && result.jpscbs_success) {
+            both_success_count[result.num_agents]++;
+            cbs_runtime_sum[result.num_agents] += result.cbs_runtime;
+            cbs_nodes_sum[result.num_agents] += result.cbs_nodes;
             jpscbs_runtime_sum[result.num_agents] += result.jpscbs_runtime;
             jpscbs_nodes_sum[result.num_agents] += result.jpscbs_nodes;
         }
@@ -111,6 +116,12 @@ void process_csv_file(const std::string& input_path) {
     
     // 总场景数
     int total_scenarios = unique_scenarios.size();
+    
+    // 获取所有出现的智能体数量
+    std::set<size_t> all_agent_counts;
+    for (const auto& result : results) {
+        all_agent_counts.insert(result.num_agents);
+    }
     
     // 重写整个文件
     std::ofstream outfile(input_path);
@@ -124,19 +135,23 @@ void process_csv_file(const std::string& input_path) {
     outfile << "Agents,CBS Success Rate,CBS Avg Runtime,CBS Avg Nodes,"
             << "JPSCBS Success Rate,JPSCBS Avg Runtime,JPSCBS Avg Nodes\n";
     
-    for (const auto& [agents, count] : cbs_success_count) {
+    // 使用所有智能体数量进行遍历
+    for (const auto& agents : all_agent_counts) {
         double cbs_success_rate = cbs_success_count[agents] * 100.0 / total_scenarios;
         double jpscbs_success_rate = jpscbs_success_count[agents] * 100.0 / total_scenarios;
         
-        double cbs_avg_runtime = cbs_success_count[agents] > 0 ? 
-            cbs_runtime_sum[agents] / cbs_success_count[agents] : 0;
-        double jpscbs_avg_runtime = jpscbs_success_count[agents] > 0 ? 
-            jpscbs_runtime_sum[agents] / jpscbs_success_count[agents] : 0;
-            
-        double cbs_avg_nodes = cbs_success_count[agents] > 0 ? 
-            cbs_nodes_sum[agents] / cbs_success_count[agents] : 0;
-        double jpscbs_avg_nodes = jpscbs_success_count[agents] > 0 ? 
-            jpscbs_nodes_sum[agents] / jpscbs_success_count[agents] : 0;
+        // 计算平均运行时间和节点数（只考虑两种算法都成功的情况）
+        double cbs_avg_runtime = 0.0;
+        double jpscbs_avg_runtime = 0.0;
+        double cbs_avg_nodes = 0.0;
+        double jpscbs_avg_nodes = 0.0;
+
+        if (both_success_count[agents] > 0) {
+            cbs_avg_runtime = cbs_runtime_sum[agents] / both_success_count[agents];
+            cbs_avg_nodes = cbs_nodes_sum[agents] / both_success_count[agents];
+            jpscbs_avg_runtime = jpscbs_runtime_sum[agents] / both_success_count[agents];
+            jpscbs_avg_nodes = jpscbs_nodes_sum[agents] / both_success_count[agents];
+        }
         
         outfile << agents << ","
                 << std::fixed << std::setprecision(2) << cbs_success_rate << "%,"
