@@ -1,21 +1,19 @@
 #ifndef JPSCBS_H
 #define JPSCBS_H
 
-#include "../Vertex.h"
-#include "../jps/JPS.h"
-#include "../Agent.h"
-#include "../cbs/CBS.h"
-#include "../astar/Astar.h"
-#include "../utilities/Log.h"
-#include "../utilities/Utility.h"
+#include "../basic/Vertex.h"
+#include "../basic/Agent.h"
+#include "../astar/AStar.h"  // 先包含 AStar.h
+#include "../jps/JPS.h"      // 最后包含 JPS.h
+#include "../basic/Constraint.h"
+#include "../basic/Conflict.h"
 #include <unordered_map>
 #include <queue>
 #include <vector>
-#include <tuple>
 #include <chrono>
-#include <iostream>
 #include <sstream>
 #include <atomic>
+#include <unordered_set>
 
 struct JPSCBSNode {
     // Multiple paths for each agent (sorted by cost)
@@ -36,31 +34,18 @@ struct JPSCBSNodeComparator {
     bool operator()(const std::shared_ptr<JPSCBSNode>& a, 
                    const std::shared_ptr<JPSCBSNode>& b) const {
         if (std::abs(a->cost - b->cost) < 1e-6) {
-            // 使用非静态成员函数
             int a_conflicts = count_conflicts(*a);
             int b_conflicts = count_conflicts(*b);
             if (a_conflicts != b_conflicts) {
                 return a_conflicts > b_conflicts;
             }
-            // 使用内存地址作为稳定的排序依据
             return a.get() > b.get();
         }
         return a->cost > b->cost;
     }
 
 private:
-    static int count_conflicts(const JPSCBSNode& node) {
-        int conflicts = 0;
-        for (const auto& [agent_id, paths] : node.solution) {
-            if (paths.empty()) continue;
-            const auto& path = paths.top().path;
-            for (const auto& [other_id, other_paths] : node.solution) {
-                if (other_id <= agent_id || other_paths.empty()) continue;
-                conflicts += utils::count_conflicts(path, other_paths.top().path);
-            }
-        }
-        return conflicts;
-    }
+    static int count_conflicts(const JPSCBSNode& node);  // 只保留声明
 };
 
 struct ConstraintInfo {
@@ -89,7 +74,9 @@ struct ConstraintInfo {
         std::stringstream ss;
         ss << "ConstraintInfo{\n"
            << "  constraint: Agent " << constraint.agent 
-           << " cannot reach position (" << constraint.vertex.x << "," << constraint.vertex.y 
+           << " cannot reach position (" << (constraint.type == Constraint::EDGE ? 
+           constraint.edge_constraint.v1.x + "," + constraint.edge_constraint.v1.y 
+           : constraint.vertex_constraint.vertex.x + "," + constraint.vertex_constraint.vertex.y) 
            << ") at time " << constraint.time << "\n"
            << "  jp1: (" << jp1.x << "," << jp1.y 
            << ") [path_idx: " << jp1_path_index 
@@ -154,7 +141,14 @@ private:
     bool has_better_solution(const std::vector<Vertex>& new_path, 
                                   const ConstraintInfo& info,
                                   const JPSPath& current_path);
+                                  
+    std::pair<ConstraintInfo, std::vector<Vertex>> find_alt_path(
+        const ConstraintInfo& info,
+        const JPSPath& current_path,
+        const std::vector<Constraint>& temp_constraints,
+        const ConflictAvoidanceTable& cat);
     
+
     int count_conflicts(const JPSCBSNode& node);
     void print_node_info(const JPSCBSNode& node, const std::string& prefix);
     std::vector<ConstraintInfo> collect_constraint_infos(const JPSCBSNode& node, 

@@ -1,7 +1,11 @@
-#include "../utilities/Utility.h"
-#include "../utilities/Log.h"
 #include "JPS.h"
+#include "../utilities/GridUtility.h"
+#include "../utilities/Log.h"
+#include "../heuristic/Heuristic.h"
+#include "../action/Action.h"
+#include "../utilities/ConstraintUtility.h"
 #include <algorithm>
+#include <unordered_map>
 #include <sstream>
 #include <chrono>
 

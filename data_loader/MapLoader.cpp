@@ -1,5 +1,4 @@
 #include "MapLoader.h"
-#include "../src/astar/AStar.h"
 #include "../src/utilities/Log.h"
 #include <fstream>
 #include <sstream>

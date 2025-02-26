@@ -1,7 +1,7 @@
 #ifndef ACTION_H
 #define ACTION_H
 
-#include "../Vertex.h"
+#include "../basic/Vertex.h"
 #include <vector>
 #include <string>
 #include <unordered_map>

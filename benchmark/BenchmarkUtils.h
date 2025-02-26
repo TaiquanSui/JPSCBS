@@ -1,9 +1,9 @@
 #ifndef BENCHMARK_UTILS_H
 #define BENCHMARK_UTILS_H
 
-#include "../src/Agent.h"
+#include "../src/basic/Agent.h"
 #include "../data_loader/MapLoader.h"
-#include "../src/utilities/Utility.h"
+#include "../src/utilities/GridUtility.h"
 #include "../src/utilities/Log.h"
 #include "../src/cbs/CBS.h"
 #include "../src/jpscbs/JPSCBS.h"

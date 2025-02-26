@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../../src/cbs/CBS.h"
-#include "../../../src/utilities/Utility.h"
+#include "../../../src/utilities/GridUtility.h"
 #include <chrono>
 
 class CBSTest : public ::testing::Test {

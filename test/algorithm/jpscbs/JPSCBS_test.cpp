@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../../src/jpscbs/JPSCBS.h"
-#include "../../../src/utilities/Utility.h"
+#include "../../../src/utilities/GridUtility.h"
 #include "../../../src/utilities/Log.h"
 #include <sstream>
 #include <chrono>

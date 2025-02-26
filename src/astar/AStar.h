@@ -1,17 +1,9 @@
 #ifndef ASTAR_H
 #define ASTAR_H
 
-#include "../Vertex.h"
-#include "../action/Action.h"
-#include "../Heuristic.h"
-#include "../cbs/CBS.h"
+#include "../basic/Vertex.h"
+#include "../basic/Constraint.h"
 #include "../cbs/ConflictAvoidanceTable.h"
-#include <vector>
-#include <queue>
-#include <unordered_map>
-#include <algorithm>
-#include <cmath>
-#include <functional>
 #include <memory>
 
 struct AStarNode {
@@ -99,5 +91,9 @@ std::vector<Vertex> a_star(int agent_id,
                           const std::vector<Constraint>& constraints,
                           const int start_time = 0,
                           const ConflictAvoidanceTable& cat = ConflictAvoidanceTable());
+
+bool violatesConstraints(const Vertex& current, const Vertex& next, 
+                        int agent_id, int time,
+                        const std::vector<Constraint>& constraints);
 
 #endif // ASTAR_H

@@ -42,6 +42,7 @@ list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/Benchmark\\.cpp$")
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/CBSSingleTest\\.cpp$")
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/JPSCBSSingleTest\\.cpp$")
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/GenerateComparisonSummary\\.cpp$")
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX ".*/GenerateOverallStatistics\\.cpp$")
 
 # 创建库
 add_library(project_lib ${PROJECT_SOURCES})
@@ -69,7 +70,6 @@ target_link_libraries(cbs_single_test PRIVATE project_lib)
 add_executable(generate_comparison_summary benchmark/GenerateComparisonSummary.cpp)
 target_link_libraries(generate_comparison_summary PRIVATE project_lib)
 
-# 添加新的可执行文件
 add_executable(generate_overall_statistics benchmark/GenerateOverallStatistics.cpp)
 target_link_libraries(generate_overall_statistics PRIVATE project_lib)
 

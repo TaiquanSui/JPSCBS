@@ -1,15 +1,11 @@
 #ifndef JPS_H
 #define JPS_H
 
-#include "../Vertex.h"
+#include "../basic/Vertex.h"
 #include "../astar/AStar.h"
-#include "../Heuristic.h"
-#include "../action/Action.h"
 #include <vector>
 #include <memory>
 #include <queue>
-#include <unordered_map>
-#include <functional>
 
 struct Interval {
     std::vector<Vertex> jump_points;  // Store all jump points in the interval in order

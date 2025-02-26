@@ -1,33 +1,16 @@
 #ifndef CBS_H
 #define CBS_H
 
-#include "../Vertex.h"
-#include "../Agent.h"
+#include "../basic/Vertex.h"
+#include "../basic/Agent.h"
+#include "../basic/Constraint.h"
+#include "../basic/Conflict.h"
 #include "ConflictAvoidanceTable.h"
-#include <vector>
-#include <unordered_map>
 #include <chrono>
 #include <atomic>
+#include <unordered_map>
 #include <unordered_set>
 
-
-struct Conflict {
-    int agent1;
-    int agent2;
-    Vertex vertex;
-    int time;
-    
-    Conflict(int a1, int a2, const Vertex& v, int t) 
-        : agent1(a1), agent2(a2), vertex(v), time(t) {}
-};
-
-struct Constraint {
-    int agent;
-    Vertex vertex;
-    int time;
-    
-    Constraint(int a, const Vertex& v, int t) : agent(a), vertex(v), time(t) {}
-};
 
 struct CBSNode {
     std::unordered_map<int, std::vector<Vertex>> solution;
