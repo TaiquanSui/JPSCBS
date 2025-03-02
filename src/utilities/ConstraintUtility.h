@@ -52,9 +52,9 @@ namespace utils {
                 }
                 
                 // 跟随冲突
-                if (path1[i+1] == path2[i] || path2[i+1] == path1[i]) {
-                    conflicts++;
-                }
+                // if (path1[i+1] == path2[i] || path2[i+1] == path1[i]) {
+                //     conflicts++;
+                // }
                 
                 // 对角线交叉冲突
                 Vertex dir1 = path1[i+1] - path1[i];
@@ -198,10 +198,10 @@ namespace utils {
                         }
 
                         // 检查跟随冲突
-                        if (check_following_conflict(path1[i], path1[i+1], path2[i], path2[i+1],
-                                                  i, agent1, agent2, constraints)) {
-                            return constraints;
-                        }
+                        // if (check_following_conflict(path1[i], path1[i+1], path2[i], path2[i+1],
+                        //                           i, agent1, agent2, constraints)) {
+                        //     return constraints;
+                        // }
 
                         // 检查对角线交叉冲突
                         if (check_diagonal_conflict(path1[i], path1[i+1], path2[i], path2[i+1],
