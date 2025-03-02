@@ -18,17 +18,17 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
     start_time = std::chrono::steady_clock::now();
     interrupted = false;  // 重置中断状态
     
-    // logger::log_info("Starting CBS solver");
+    // //logger::log_info("Starting CBS solver");
     
     CBSNode root;
     
     // Find initial paths for each agent
     for (const auto& agent : agents) {
-        // logger::log_info("start: (" + std::to_string(agent.start.x) + "," + std::to_string(agent.start.y) + ")");
-        // logger::log_info("goal: (" + std::to_string(agent.goal.x) + "," + std::to_string(agent.goal.y) + ")");
+        // //logger::log_info("start: (" + std::to_string(agent.start.x) + "," + std::to_string(agent.start.y) + ")");
+        // //logger::log_info("goal: (" + std::to_string(agent.goal.x) + "," + std::to_string(agent.goal.y) + ")");
         auto path = a_star(agent.start, agent.goal, grid);
         if (path.empty()) {
-            // logger::log_info("cbs no solution");
+            // //logger::log_info("cbs no solution");
             return {};
         } // No solution
         root.solution[agent.id] = path;
@@ -60,23 +60,23 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
         print_node_info(current, "Current Node");
 
         auto constraints = generate_constraints(current);
-        logger::log_info("Generating constraints");
-        logger::print_constraints(constraints, "Constraints");
+        //logger::log_info("Generating constraints");
+        //logger::print_constraints(constraints, "Constraints");
 
         if (constraints.empty()) {
             std::vector<std::vector<Vertex>> result;
             result.reserve(agents.size());
             for (const auto& agent : agents) {
                 result.push_back(current.solution[agent.id]);
-                logger::log_info("path of agent" + std::to_string(agent.id) + " :" + logger::vectorToString(current.solution[agent.id]));
+                //logger::log_info("path of agent" + std::to_string(agent.id) + " :" + //logger::vectorToString(current.solution[agent.id]));
             }
-            logger::log_info("expanded nodes:" + std::to_string(expanded_nodes));
+            //logger::log_info("expanded nodes:" + std::to_string(expanded_nodes));
 
             return result;
         }
 
         if (should_terminate()) {
-            // logger::log_info("CBS solver interrupted");
+            // //logger::log_info("CBS solver interrupted");
             return {};
         }
 
@@ -101,7 +101,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
         }else{
             for (const auto& constraint : constraints) {
                 if (should_terminate()) {
-                    // //logger::log_info("CBS solver interrupted");
+                    // ////logger::log_info("CBS solver interrupted");
                     return {};
                 }
 
@@ -116,15 +116,15 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
                               grid, child.constraints, 0, cat);
 
                 if (!new_path.empty()) {
-                    //logger::log_info("New path found for agent " + std::to_string(utils::calculate_path_cost(new_path)));
-                    //logger::log_info("path: " + //logger::vectorToString(new_path));
+                    ////logger::log_info("New path found for agent " + std::to_string(utils::calculate_path_cost(new_path)));
+                    ////logger::log_info("path: " + ////logger::vectorToString(new_path));
                     child.solution[constraint.agent] = new_path;
                     child.cost = calculate_sic(child);
                     open_list.push(child);
                     // print_node_info(child, "New Child Node Generated");
-                    //logger::log_info("New cost: " + std::to_string(child.cost));
+                    ////logger::log_info("New cost: " + std::to_string(child.cost));
                 } else {
-                    // //logger::log_warning("Cannot find new path for agent " + std::to_string(constraint.agent) + 
+                    // ////logger::log_warning("Cannot find new path for agent " + std::to_string(constraint.agent) + 
                     //                  " that satisfies constraints");
                 }
             }
@@ -133,7 +133,7 @@ std::vector<std::vector<Vertex>> CBS::solve(const std::vector<Agent>& agents,
         
     }
 
-    // logger::log_info("CBS found no solution");
+    // //logger::log_info("CBS found no solution");
     return {};
 }
 
@@ -175,13 +175,13 @@ CBSBypassResult CBS::find_bypass(CBSNode& node, const std::vector<Constraint>& c
                             const std::vector<Agent>& agents, 
                             const std::vector<std::vector<int>>& grid) {
     int original_conflicts = count_conflicts(node);
-    logger::log_info("Original conflict count: " + std::to_string(original_conflicts));
+    //logger::log_info("Original conflict count: " + std::to_string(original_conflicts));
     
     std::vector<std::pair<Constraint, std::vector<Vertex>>> bypass_paths;
 
     for (const auto& constraint : constraints) {
         if (should_terminate()) {
-            // //logger::log_info("CBS solver interrupted");
+            // ////logger::log_info("CBS solver interrupted");
             return {};
         }
 
@@ -190,14 +190,14 @@ CBSBypassResult CBS::find_bypass(CBSNode& node, const std::vector<Constraint>& c
             
         auto original_path = node.solution[affected_agent.id];
         
-        logger::print_constraint(constraint, "find bypass for constraint: ");
+        //logger::print_constraint(constraint, "find bypass for constraint: ");
         std::vector<Constraint> temp_constraints = node.constraints;
         temp_constraints.push_back(constraint);
         
         ConflictAvoidanceTable cat = calculate_cat({affected_agent.id}, node);
         auto new_path = a_star(affected_agent.id, affected_agent.start, affected_agent.goal, 
                           grid, temp_constraints, 0, cat);
-        logger::log_info("new bypass path: " + logger::vectorToString(new_path));
+        //logger::log_info("new bypass path: " + //logger::vectorToString(new_path));
 
         if (!new_path.empty()) {
             if (std::abs(utils::calculate_path_cost(new_path) - 
@@ -207,7 +207,7 @@ CBSBypassResult CBS::find_bypass(CBSNode& node, const std::vector<Constraint>& c
                 temp_node.solution[affected_agent.id] = new_path;
                 
                 int new_conflicts = count_conflicts(temp_node);
-                logger::log_info("New conflict count: " + std::to_string(new_conflicts));
+                //logger::log_info("New conflict count: " + std::to_string(new_conflicts));
                 
                 if (new_conflicts < original_conflicts) {
                     node.solution[affected_agent.id] = new_path;
@@ -233,19 +233,19 @@ bool CBS::is_timeout() const {
 
 void CBS::print_node_info(const CBSNode& node, const std::string& prefix) {
     if (!prefix.empty()) {
-        logger::log_info(prefix + ":");
+        //logger::log_info(prefix + ":");
     }
-    logger::log_info("Total cost: " + std::to_string(std::round(node.cost * 1000) / 1000.0));
-    logger::print_constraints(node.constraints, "Constraints");
+    //logger::log_info("Total cost: " + std::to_string(std::round(node.cost * 1000) / 1000.0));
+    //logger::print_constraints(node.constraints, "Constraints");
     
     for (const auto& [agent_id, path] : node.solution) {
         std::string path_str = "Path for agent " + std::to_string(agent_id) + ": ";
         for (const auto& pos : path) {
             path_str += "(" + std::to_string(pos.x) + "," + std::to_string(pos.y) + ") ";
         }
-        logger::log_info(path_str);
+        //logger::log_info(path_str);
     }
-    //logger::log_info("------------------------");
+    ////logger::log_info("------------------------");
 }
 
 double CBS::calculate_sic(const CBSNode& node) {
