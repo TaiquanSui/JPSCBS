@@ -20,6 +20,8 @@ cmake-build-release/
 .idea/
 *.iml
 
+.ipynb_checkpoints/
+
 # 临时文件
 *.log
 *.tmp
