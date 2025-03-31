@@ -23,12 +23,22 @@ struct Interval {
     }
 };
 
+struct JumpPointWithIndex {
+    Vertex pos;
+    size_t path_index;  // 在path中的索引位置
+
+    JumpPointWithIndex(const Vertex& p, size_t idx) 
+        : pos(p), path_index(idx) {}
+};
+
 struct JPSPath {
     std::vector<Vertex> path;
-    std::vector<Vertex> jump_points;
+    std::vector<JumpPointWithIndex> jump_points;
     std::vector<Interval> possible_intervals;
 
-    JPSPath(const std::vector<Vertex>& path, const std::vector<Vertex>& jump_points, const std::vector<Interval>& possible_intervals)
+    JPSPath(const std::vector<Vertex>& path, 
+            const std::vector<JumpPointWithIndex>& jump_points, 
+            const std::vector<Interval>& possible_intervals)
         : path(path), jump_points(jump_points), possible_intervals(possible_intervals) {}
 };
 

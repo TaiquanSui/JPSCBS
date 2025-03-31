@@ -140,15 +140,13 @@ std::vector<Vertex> a_star(int agent_id,
         auto current = open_list.top();
         open_list.pop();
 
-        if(start == Vertex(74,40) && goal == Vertex(185,115)){
-        logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," +
-               std::to_string(current->pos.y) + "), g: " +
-               std::to_string(current->g) + ", h: " +
-               std::to_string(current->h) + ", f: " +
-               std::to_string(current->f()) + ", time: " +
-               std::to_string(current->time));
-        }
-
+        // logger::log_info("Current node: (" + std::to_string(current->pos.x) + "," +
+        //        std::to_string(current->pos.y) + "), g: " +
+        //        std::to_string(current->g) + ", h: " +
+        //        std::to_string(current->h) + ", f: " +
+        //        std::to_string(current->f()) + ", time: " +
+        //        std::to_string(current->time));
+        
         if (current->pos == goal) {
             auto path = reconstruct_path(current);
             // logger::log_info("Agent " + std::to_string(agent_id) + " found path: " + 
@@ -187,15 +185,13 @@ std::vector<Vertex> a_star(int agent_id,
             auto next_node = std::make_shared<AStarNode>(
                 next_pos, tentative_g, heuristic(next_pos, goal), current, next_time, conflicts);
 
-            if(start == Vertex(74,40) && goal == Vertex(185,115)){
-            logger::log_info("Generated successor node: (" + std::to_string(next_pos.x) + "," +
-                           std::to_string(next_pos.y) + "), g: " +
-                           std::to_string(tentative_g) +
-                           ", h: " + std::to_string(heuristic(next_pos, goal)) +
-                           ", f: " + std::to_string(next_node->f()) +
-                           ", time: " + std::to_string(next_time) +
-                           ", conflicts: " + std::to_string(conflicts));
-            }
+            // logger::log_info("Generated successor node: (" + std::to_string(next_pos.x) + "," +
+            //                std::to_string(next_pos.y) + "), g: " +
+            //                std::to_string(tentative_g) +
+            //                ", h: " + std::to_string(heuristic(next_pos, goal)) +
+            //                ", f: " + std::to_string(next_node->f()) +
+            //                ", time: " + std::to_string(next_time) +
+            //                ", conflicts: " + std::to_string(conflicts));
             
             open_list.push(next_node);
         }

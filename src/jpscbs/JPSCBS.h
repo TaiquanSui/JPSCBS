@@ -16,7 +16,6 @@
 #include <unordered_set>
 
 struct JPSCBSNode {
-    // Multiple paths for each agent (sorted by cost)
     std::unordered_map<int, std::priority_queue<JPSPath, std::vector<JPSPath>, JPSPathComparator>> solution;
     std::vector<Constraint> constraints;
     double cost;
@@ -138,9 +137,9 @@ private:
 
     void update_path_with_local_solution(JPSCBSNode& node, const ConstraintInfo& info, const std::vector<Vertex>& local_path);
 
-    bool has_better_solution(const std::vector<Vertex>& new_path, 
-                                  const ConstraintInfo& info,
-                                  const JPSPath& current_path);
+    bool has_better_solution(const std::vector<Vertex>& new_path,
+                            const ConstraintInfo& info,
+                            const Vertex& next_jp_decide);
                                   
     std::pair<ConstraintInfo, std::vector<Vertex>> find_alt_path(
         const ConstraintInfo& info,
@@ -155,11 +154,6 @@ private:
                                                        const std::vector<Constraint>& constraints);
     std::shared_ptr<JPSCBSNode> initialize(const std::vector<Agent>& agents);
     ConflictAvoidanceTable calculate_cat(const std::unordered_set<int>& excluded_agents, const JPSCBSNode& node) const;
-
-    bool is_path_crossing_line(const std::vector<Vertex>& path, 
-                             const Vertex& jp1,
-                             const Vertex& jp2, 
-                             const Vertex& next_jp_decide) const;
 };
 
 #endif // JPSCBS_H

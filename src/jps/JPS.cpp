@@ -272,15 +272,17 @@ namespace {
         }
 
         // 3. Identify symmetric intervals and key jump points
-        std::vector<Vertex> turning_points;
+        std::vector<JumpPointWithIndex> turning_points;
         std::vector<Interval> possible_intervals;
         turning_points.reserve(all_turning_points.size());
         possible_intervals.reserve(all_turning_points.size() / 2);
 
         for (size_t i = 0; i < all_turning_points.size(); ++i) {
-            // logger::log_info("Current point: (" + std::to_string(all_turning_points[i].x) + "," + std::to_string(all_turning_points[i].y) + ")");
-            // logger::log_info("Index: " + std::to_string(i));
-            turning_points.push_back(all_turning_points[i]);
+            // 找到当前跳点在完整路径中的索引
+            auto path_it = std::find(path.begin(), path.end(), all_turning_points[i]);
+            size_t path_index = std::distance(path.begin(), path_it);
+            
+            turning_points.emplace_back(all_turning_points[i], path_index);
             
             if (i + 2 >= all_turning_points.size()) {
                 continue;
@@ -311,6 +313,7 @@ namespace {
                 const auto& pattern_end = all_turning_points[j + 2];
                 Vertex pattern_dir1 = utils::calculateDirection(pattern_start, pattern_mid);
                 Vertex pattern_dir2 = utils::calculateDirection(pattern_mid, pattern_end);
+                
                 // 检查是否是相同的模式
                 if (pattern_dir1 == dir1 && pattern_dir2 == dir2) {
                     // 添加到当前区间
@@ -327,7 +330,6 @@ namespace {
             possible_intervals.emplace_back(interval_points);
             i = j - 1;
         }
-
 
         return JPSPath(std::move(path), std::move(turning_points), std::move(possible_intervals));
     }    
