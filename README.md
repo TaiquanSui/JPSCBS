@@ -1,6 +1,6 @@
 # Multi-Agent Path Finding with CBS and JPSCBS
 
-This project implements and compares two Multi-Agent Path Finding (MAPF) algorithms: the classic Conflict-Based Search (CBS) with bypass improvement and a new algorithm JPSCBS improved by Muti-Solution Jump point Search based on CBS. For the theoretical part, see Master Thesis.pdf. A shorter theoretical explaination can be found in Localized_conflict_resolution.pdf
+This project implements and compares two Multi-Agent Path Finding (MAPF) algorithms: the classic Conflict-Based Search (CBS) with bypass improvement and a new algorithm JPSCBS improved by Muti-Solution Jump point Search based on CBS. For the theoretical part, see Master Thesis.pdf. A shorter theoretical explaination can be found in Localized_Conflict_Resolution.pdf
 
 ## Overview
 
