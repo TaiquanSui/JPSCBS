@@ -82,7 +82,8 @@ public:
         const std::string& map_file,
         const std::string& scen_file,
         Solver* solver,
-        double time_limit = 30.0);
+        double time_limit = 30.0,
+        int step = 1);
 
     template<typename Solver>
     static std::vector<BenchmarkResult> run_all_scenarios_impl(const std::string& map_path, Solver* solver);

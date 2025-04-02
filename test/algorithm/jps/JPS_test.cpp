@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "../../../src/jps/JPS.h"
 
+#include "src/heuristic/Heuristic.h"
+
 class JPSTest : public ::testing::Test {
 protected:
     std::vector<std::vector<int>> grid;

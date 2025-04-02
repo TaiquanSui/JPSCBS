@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "../../../src/astar/AStar.h"
 
+#include "src/utilities/GridUtility.h"
+
 class AStarTest : public ::testing::Test {
 protected:
     std::vector<std::vector<int>> grid;

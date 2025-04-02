@@ -25,10 +25,17 @@ struct Interval {
 
 struct JumpPointWithIndex {
     Vertex pos;
-    size_t path_index;  // 在path中的索引位置
+    size_t path_index;
 
-    JumpPointWithIndex(const Vertex& p, size_t idx) 
-        : pos(p), path_index(idx) {}
+    JumpPointWithIndex(Vertex pos, size_t path_index) : pos(pos), path_index(path_index) {}
+
+    bool operator==(const Vertex& other) const {
+        return pos == other;
+    }
+
+    bool operator==(const JumpPointWithIndex& other) const {
+        return pos == other.pos && path_index == other.path_index;
+    }
 };
 
 struct JPSPath {

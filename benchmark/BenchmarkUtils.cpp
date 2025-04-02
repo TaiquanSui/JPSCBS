@@ -77,19 +77,22 @@ void BenchmarkUtils::benchmark_all_scenarios_comparison(
         auto map_paths = get_all_map_paths();
         std::string root_dir = get_project_root();
         
-        // 定义要跳过的地图
-        std::unordered_set<std::string> skip_maps = {
-            "empty-8-8",
-            "empty-16-16",
-            "empty-32-32",
-            "empty-48-48"
+        // 定义要测试的地图
+        std::unordered_set<std::string> target_maps = {
+            "Paris_1_256",
+            "lak303d",
+            "maze-128-128-2",
+            "orz900d",
+            "warehouse-20-40-10-2-2",
         };
+        
+        const double TIME_LIMIT = 300.0;  // 5分钟 = 300秒
         
         for (const auto& map_path : map_paths) {
             std::string map_name = get_map_name(map_path);
             
-            // 检查是否需要跳过当前地图
-            if (skip_maps.find(map_name) != skip_maps.end()) {
+            // 检查是否是目标地图
+            if (target_maps.find(map_name) == target_maps.end()) {
                 logger::log_info("跳过地图: " + map_name);
                 continue;
             }
@@ -152,14 +155,14 @@ void BenchmarkUtils::benchmark_all_scenarios_comparison(
                         
                         // 运行CBS
                         logger::log_info("Running CBS algorithm");
-                        auto cbs_scenario_results = run_scen_file_impl(map_path, scen_file, solver1);
+                        auto cbs_scenario_results = run_scen_file_impl(map_path, scen_file, solver1, TIME_LIMIT, 5);
                         
                         // 冷却时间
                         std::this_thread::sleep_for(std::chrono::seconds(2));
                         
                         // 运行JPSCBS
                         logger::log_info("Running JPSCBS algorithm");
-                        auto jpscbs_scenario_results = run_scen_file_impl(map_path, scen_file, solver2);
+                        auto jpscbs_scenario_results = run_scen_file_impl(map_path, scen_file, solver2, TIME_LIMIT, 5);
                         
                         // 立即写入这个场景的比较结果
                         write_comparison_results_to_csv(
@@ -197,7 +200,8 @@ std::vector<BenchmarkResult> BenchmarkUtils::run_scen_file_impl(
     const std::string& map_file,
     const std::string& scen_file,
     Solver* solver,
-    double time_limit) {
+    double time_limit,
+    int agent_step) {
     
     auto grid = load_map(map_file);
     auto all_agents = load_scen(scen_file, grid);
@@ -208,7 +212,7 @@ std::vector<BenchmarkResult> BenchmarkUtils::run_scen_file_impl(
     std::string map_name = map_path.filename().string();
     std::string scen_name = scen_path.filename().string();
 
-    size_t num_agents = 1;
+    size_t num_agents = 5;
 
     while (num_agents <= all_agents.size()) {
         solver->reset_interrupt();
@@ -279,7 +283,7 @@ std::vector<BenchmarkResult> BenchmarkUtils::run_scen_file_impl(
 
             if (!success || timeout) break;
 
-            num_agents++;
+            num_agents += agent_step;
 
 
         } catch (const std::exception& e) {

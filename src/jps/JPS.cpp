@@ -16,18 +16,27 @@ namespace {
         
         // 获取从parent到current的完整路径
         auto parent = current->parent;
-        Vertex dir = utils::calculateDirection(parent->pos, current->pos);
-        Vertex pos = parent->pos;
         
-        // 检查路径上的每个点
-        while (pos != current->pos) {
-            if (pos == point) {
-                return false;  // 发现环路
-            }
-            pos = Vertex(pos.x + dir.x, pos.y + dir.y);
+        // 快速检查点是否在当前路径段的坐标范围内
+        bool in_x_range = (point.x >= std::min(parent->pos.x, current->pos.x) && 
+                          point.x <= std::max(parent->pos.x, current->pos.x));
+        bool in_y_range = (point.y >= std::min(parent->pos.y, current->pos.y) && 
+                          point.y <= std::max(parent->pos.y, current->pos.y));
+        
+        // 如果点不在坐标范围内，直接检查父节点
+        if (!in_x_range || !in_y_range) {
+            return is_cycle_free(parent, point);
         }
         
-        // 递归检查parent的路径
+        // 点在范围内，比较斜率
+        Vertex dir_to_parent = utils::calculateDirection(point, parent->pos);
+        Vertex dir_to_current = utils::calculateDirection(point, current->pos);
+        
+        // 如果方向相反，说明点在路径上
+        if (dir_to_parent.x == -dir_to_current.x && dir_to_parent.y == -dir_to_current.y) {
+            return false;
+        }
+        
         return is_cycle_free(parent, point);
     }
 
