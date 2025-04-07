@@ -59,7 +59,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         }
 
         if (should_terminate()) {
-            //logger::log_info("JPSCBS solver interrupted");
+            logger::log_info("JPSCBS solver interrupted");
             return {};
         }
 
@@ -75,7 +75,7 @@ std::vector<std::vector<Vertex>> JPSCBS::solve(const std::vector<Agent>& agents,
         // generate new node for each constraint
         for (const auto& bypass_path : bypass_result.bypass_paths) {
             if (should_terminate()) {
-                //logger::log_info("JPSCBS solver interrupted");
+                logger::log_info("JPSCBS solver interrupted");
                 return {};
             }
 
@@ -277,6 +277,7 @@ JPSBypassResult JPSCBS::find_bypass(JPSCBSNode& node,
     temp_constraints.reserve(node.constraints.size() + 1);
 
     for(const auto& info : constraint_infos) {
+        logger::log_info("finding bypass for constraint: " + info.toString());
         auto& agent_paths = node.solution[info.constraint.agent];
         JPSPath original_path = agent_paths.top();
 
@@ -504,18 +505,19 @@ void JPSCBS::print_node_info(const JPSCBSNode& node, const std::string& prefix) 
     }
     logger::log_info("Total cost: " + std::to_string(std::round(node.cost * 1000) / 1000.0));
     logger::print_constraints(node.constraints, "Constraints");
-    
+    logger::log_info("expanded nodes: " + std::to_string(expanded_nodes));
+
     // 打印当前节点中每个智能体的跳点
-    for (const auto& [agent_id, paths] : node.solution) {
-        if (!paths.empty()) {
-            std::string jump_points_str = "Agent " + std::to_string(agent_id) + " Current JPs: ";
-            for (const auto& jp : paths.top().jump_points) {
-                jump_points_str += "(" + std::to_string(jp.pos.x) + "," + std::to_string(jp.pos.y) + ") ";
-            }
-            logger::log_info(jump_points_str);
-            logger::log_info("Agent " + std::to_string(agent_id) + " path: " + logger::vectorToString(paths.top().path));
-        }
-    }
+    // for (const auto& [agent_id, paths] : node.solution) {
+    //     if (!paths.empty()) {
+    //         std::string jump_points_str = "Agent " + std::to_string(agent_id) + " Current JPs: ";
+    //         for (const auto& jp : paths.top().jump_points) {
+    //             jump_points_str += "(" + std::to_string(jp.pos.x) + "," + std::to_string(jp.pos.y) + ") ";
+    //         }
+    //         logger::log_info(jump_points_str);
+    //         logger::log_info("Agent " + std::to_string(agent_id) + " path: " + logger::vectorToString(paths.top().path));
+    //     }
+    // }
 
     // 打印solutions中存储的所有路径信息
     // logger::log_info("All stored solutions:");
@@ -582,6 +584,19 @@ std::vector<ConstraintInfo> JPSCBS::collect_constraint_infos(const JPSCBSNode& n
                     i + 1
                 );
                 break;
+            }
+
+            if(jp1.path_index == constraint.time  && constraint.type == Constraint::EDGE) {
+                constraint_infos.emplace_back(
+                    constraint,
+                    jp1.path_index,
+                    jp2.path_index,
+                    constraint.time,
+                    jp1.pos,
+                    jp2.pos,
+                    i,
+                    i + 1
+                );
             }
         }
     }
