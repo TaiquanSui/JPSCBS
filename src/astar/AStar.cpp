@@ -12,7 +12,7 @@
 #include <functional>
 
 namespace {
-    const int MAX_SEARCH_TIME = 30;  // 最大搜索时间（秒）
+    const int MAX_SEARCH_TIME = 300;  // 最大搜索时间（秒）
     
     std::vector<Vertex> reconstruct_path(const std::shared_ptr<AStarNode>& goal_node) {
         std::vector<Vertex> path;

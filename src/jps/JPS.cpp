@@ -349,15 +349,13 @@ namespace {
 JPSPath jump_point_search(const Vertex& start, const Vertex& goal,
                          const std::vector<std::vector<int>>& grid,
                          JPSState& state) {
-    // 记录开始时间
     auto start_time = std::chrono::steady_clock::now();
-    const int MAX_SEARCH_TIME = 30;  // 最大搜索时间（秒）
+    const int MAX_SEARCH_TIME = 300;  // 修改为 5 分钟
 
     std::vector<std::shared_ptr<AStarNode>> closed_list;
     std::vector<std::shared_ptr<AStarNode>> temp_nodes;
 
     while (!state.open_list.empty()) {
-        // 检查是否超时
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
         if (elapsed >= MAX_SEARCH_TIME) {
